@@ -1,0 +1,187 @@
+@import "tailwindcss";
+
+/* ============================================================
+   BondByte Design System — centralized tokens (§34)
+   ============================================================ */
+
+@theme {
+  /* Light band (site default) */
+  --color-bg: #f8faff;
+  --color-bg-secondary: #eef2fb;
+  --color-surface: #ffffff;
+  --color-surface-hi: #f2f5fd;
+
+  --color-fg: #0c1832;
+  --color-fg-muted: #4a5670;
+  --color-fg-subtle: #6b7791;
+
+  --color-line: rgba(12, 24, 50, 0.12);
+  --color-line-strong: rgba(12, 24, 50, 0.22);
+
+  /* Dark band palette */
+  --color-ink: #0c1832;
+  --color-ink-secondary: #111f3d;
+  --color-ink-surface: #16264a;
+
+  /* Brand accent */
+  --color-accent: #2f6fed;
+  --color-accent-hi: #5a92ff;
+  --color-accent-dim: #1c4fbd;
+
+  /* Typography */
+  --font-sans: var(--font-geist-sans), "Inter", system-ui, sans-serif;
+  --font-mono: var(--font-geist-mono), ui-monospace, monospace;
+
+  /* Layout */
+  --spacing-section: 8rem;
+  --radius-card: 0.75rem;
+
+  /* Motion */
+  --ease-out-expo: cubic-bezier(0.16, 1, 0.3, 1);
+  --ease-in-out-quart: cubic-bezier(0.76, 0, 0.24, 1);
+}
+
+/*
+ * Sections opt into the dark band with `data-band="dark"`. Tokens are
+ * redefined on that subtree, so components inside keep the same utility
+ * names (bg-bg, text-fg, border-line) and invert automatically.
+ */
+/* Tinted light band — alternates with the plain light band so the page never
+   reads as one flat white sheet. */
+[data-band="tint"] {
+  --color-bg: #eef2fb;
+  --color-surface: #ffffff;
+  background-color: #eef2fb;
+}
+
+[data-band="dark"] {
+  --color-bg: #0c1832;
+  --color-bg-secondary: #111f3d;
+  --color-surface: #16264a;
+  --color-surface-hi: #1c3059;
+
+  --color-fg: #f8faff;
+  --color-fg-muted: #a3b0cc;
+  --color-fg-subtle: #8592b0;
+
+  --color-line: rgba(248, 250, 255, 0.12);
+  --color-line-strong: rgba(248, 250, 255, 0.22);
+
+  background-color: #0c1832;
+  color: #f8faff;
+}
+
+@layer base {
+  * {
+    border-color: var(--color-line);
+  }
+
+  html {
+    -webkit-font-smoothing: antialiased;
+    -moz-osx-font-smoothing: grayscale;
+    scroll-behavior: auto; /* Lenis owns scrolling */
+  }
+
+  body {
+    background-color: var(--color-bg);
+    color: var(--color-fg);
+    font-family: var(--font-sans);
+    font-synthesis-weight: none;
+    text-rendering: optimizeLegibility;
+    overflow-x: hidden;
+  }
+
+  ::selection {
+    background-color: color-mix(in srgb, var(--color-accent) 30%, transparent);
+    color: var(--color-fg);
+  }
+
+  :focus-visible {
+    outline: 2px solid var(--color-accent-hi);
+    outline-offset: 3px;
+    border-radius: 2px;
+  }
+
+  /* Hide native cursor only where the custom cursor is active (§24) */
+  html.has-custom-cursor,
+  html.has-custom-cursor * {
+    cursor: none !important;
+  }
+}
+
+@layer utilities {
+  .container-page {
+    width: 100%;
+    max-width: 88rem;
+    margin-inline: auto;
+    padding-inline: 1.5rem;
+  }
+
+  @media (min-width: 1024px) {
+    .container-page {
+      padding-inline: 3rem;
+    }
+  }
+
+  /* Editorial display type (§6) */
+  .text-display {
+    font-weight: 500;
+    line-height: 0.95;
+    letter-spacing: -0.035em;
+  }
+
+  .text-eyebrow {
+    font-family: var(--font-mono);
+    font-size: 0.6875rem;
+    letter-spacing: 0.18em;
+    text-transform: uppercase;
+    color: var(--color-fg-subtle);
+  }
+
+  /* Fine 1px grid backdrop (§32) */
+  /* Grid lines follow the band: dark ink on light, light on dark. */
+  .bg-grid {
+    background-image:
+      linear-gradient(to right, rgba(12, 24, 50, 0.055) 1px, transparent 1px),
+      linear-gradient(to bottom, rgba(12, 24, 50, 0.055) 1px, transparent 1px);
+    background-size: 72px 72px;
+  }
+
+  [data-band="dark"] .bg-grid {
+    background-image:
+      linear-gradient(to right, rgba(248, 250, 255, 0.05) 1px, transparent 1px),
+      linear-gradient(to bottom, rgba(248, 250, 255, 0.05) 1px, transparent 1px);
+  }
+
+  .mask-fade-r {
+    mask-image: linear-gradient(to right, transparent, #000 12%, #000 88%, transparent);
+  }
+
+  /* Set by GSAP/Framer before reveal so content never flashes unstyled */
+  .will-reveal {
+    will-change: transform, opacity;
+  }
+}
+
+@keyframes fadeIn {
+  from {
+    opacity: 0;
+    transform: scale(1.015);
+  }
+  to {
+    opacity: 1;
+    transform: scale(1);
+  }
+}
+
+/* Accessibility: honour reduced motion (§26) */
+@media (prefers-reduced-motion: reduce) {
+  *,
+  *::before,
+  *::after {
+    animation-duration: 0.01ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 0.01ms !important;
+    scroll-behavior: auto !important;
+  }
+}
