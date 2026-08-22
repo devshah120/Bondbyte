@@ -26,7 +26,7 @@ export interface Project {
   /** Verified outcome metrics. Empty until real numbers are provided. */
   readonly metrics: readonly { readonly value: string; readonly label: string }[];
   /**
-   * Real screenshot path under /public/projects. Null renders the designed
+   * Real screenshot path under /public/images. Null renders the designed
    * abstract visual instead — drop a file in and set the path to swap it.
    */
   readonly image: string | null;
@@ -46,21 +46,21 @@ export const PROJECTS: readonly Project[] = [
     year: null,
     stack: ["Flutter", "Node.js", "MongoDB"],
     metrics: [],
-    image: null,
+    image: "/images/kindify.webp",
     tone: "indigo",
     featured: true,
   },
   {
     slug: "padhaku",
     title: "Padhaku",
-    discipline: "Web Development",
+    discipline: "Mobile Application",
     summary: "A learning platform that keeps students moving through the material.",
     description:
       "Padhaku brings courses, lessons and student progress into one place, so educators can publish material and track how learners are actually doing without stitching together separate tools.",
     year: null,
     stack: ["React", "Node.js", "MongoDB"],
     metrics: [],
-    image: null,
+    image: "/images/padhaku.png",
     tone: "amber",
     featured: true,
   },
@@ -73,7 +73,7 @@ export const PROJECTS: readonly Project[] = [
     year: null,
     stack: ["Figma", "Design System"],
     metrics: [],
-    image: null,
+    image: "/images/furmart.webp",
     tone: "emerald",
     featured: true,
   },
@@ -86,7 +86,7 @@ export const PROJECTS: readonly Project[] = [
     year: null,
     stack: ["Figma", "Prototyping"],
     metrics: [],
-    image: null,
+    image: "/images/monginis.webp",
     tone: "rose",
     featured: true,
   },
@@ -99,7 +99,7 @@ export const PROJECTS: readonly Project[] = [
     year: null,
     stack: ["Identity", "Illustration"],
     metrics: [],
-    image: null,
+    image: "/images/75-years-gujarat.webp",
     tone: "slate",
     featured: false,
   },
@@ -112,7 +112,7 @@ export const PROJECTS: readonly Project[] = [
     year: null,
     stack: ["Identity"],
     metrics: [],
-    image: null,
+    image: "/images/indian-rail-logo-design.webp",
     tone: "slate",
     featured: false,
   },
@@ -125,7 +125,7 @@ export const PROJECTS: readonly Project[] = [
     year: null,
     stack: ["Identity"],
     metrics: [],
-    image: null,
+    image: "/images/kindify-logo-design.webp",
     tone: "indigo",
     featured: false,
   },
