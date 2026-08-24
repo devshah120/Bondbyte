@@ -75,7 +75,7 @@ jobs:
           source: "build.tar.gz"
           target: "/var/www/bondbyte/"
 
-      - name: Deploy on Server
+      - name: Update Build on Server
         uses: appleboy/ssh-action@v1.2.0
         with:
           host: ${{ secrets.SERVER_IP }}
@@ -101,17 +101,4 @@ jobs:
             # must parse it, which needs the typescript package.
             npm ci
 
-            echo "Restarting service..."
-            # The app runs as a systemd unit (see deploy/bondbyte.service).
-            # Restart, not reload: `next start` has no SIGHUP handler.
-            sudo systemctl restart bondbyte
-
-            # Fail the deploy loudly if the app did not come back up.
-            sleep 3
-            sudo systemctl is-active --quiet bondbyte || {
-              echo "!! bondbyte failed to start" >&2
-              sudo journalctl -u bondbyte -n 40 --no-pager >&2
-              exit 1
-            }
-
-            echo "Bondbyte deployed and running on port 5667"
+            echo "Build updated in /var/www/bondbyte"
