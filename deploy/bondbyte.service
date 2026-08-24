@@ -1,0 +1,31 @@
+# Install to /etc/systemd/system/bondbyte.service on the server, then:
+#   sudo systemctl daemon-reload
+#   sudo systemctl enable --now bondbyte
+#
+# nginx (sites-enabled/bondbyte) already proxies bondbyte.in -> 127.0.0.1:5667,
+# so this unit only has to keep that port served.
+
+[Unit]
+Description=Bondbyte (Next.js)
+After=network.target
+
+[Service]
+Type=simple
+WorkingDirectory=/var/www/bondbyte
+
+# Absolute path: systemd does not load nvm, so `npx`/`node` are not on PATH.
+# Find yours with `which node` and update both lines below to match.
+Environment=PATH=/root/.nvm/versions/node/v22.11.0/bin:/usr/local/bin:/usr/bin:/bin
+ExecStart=/root/.nvm/versions/node/v22.11.0/bin/npx next start -p 5667
+
+# .env.production ships with each deploy and is read by `next start`.
+Environment=NODE_ENV=production
+
+Restart=always
+RestartSec=5
+StandardOutput=journal
+StandardError=journal
+SyslogIdentifier=bondbyte
+
+[Install]
+WantedBy=multi-user.target

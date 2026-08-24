@@ -1,0 +1,117 @@
+name: Build & Deploy Bondbyte to Server
+
+on:
+  push:
+    branches:
+      - main
+  workflow_dispatch:
+
+# Two deploys must not overlap: the server deletes the old release before
+# extracting the new one, so an interleaved run would serve a half-written app.
+concurrency:
+  group: deploy-production
+  cancel-in-progress: false
+
+jobs:
+  build-deploy:
+    runs-on: ubuntu-latest
+    name: Build & Deploy Next.js App
+
+    steps:
+      - name: Checkout Repository
+        uses: actions/checkout@v4
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: "22"
+          cache: npm
+
+      # .env.production is gitignored, so CI recreates it. These are all
+      # runtime-only (the contact route reads process.env per request), but
+      # shipping the file with the build keeps `next start` self-contained.
+      - name: Create .env.production
+        run: |
+          cat > .env.production <<EOF
+          PORT=5667
+
+          SMTP_HOST=${{ vars.SMTP_HOST }}
+          SMTP_PORT=${{ vars.SMTP_PORT }}
+          SMTP_USER=${{ vars.SMTP_USER }}
+          SMTP_PASS=${{ secrets.SMTP_PASS }}
+          SMTP_FROM_NAME=${{ vars.SMTP_FROM_NAME }}
+          SMTP_FROM_EMAIL=${{ vars.SMTP_FROM_EMAIL }}
+          CONTACT_TO_EMAIL=${{ vars.CONTACT_TO_EMAIL }}
+          EOF
+
+      - name: Install Dependencies
+        run: npm ci
+
+      - name: Build Next.js App
+        run: npm run build
+
+      # Not a static export: src/app/api/contact is a server route handler and
+      # several pages are SSG'd at build time, so we ship the server build.
+      # package-lock.json carries linux binaries for @next/swc and sharp, so
+      # `npm ci` on the server resolves correctly.
+      - name: Archive Build
+        run: |
+          tar -czf build.tar.gz \
+            --exclude='.next/cache' \
+            --exclude='.next/dev' \
+            .next \
+            public \
+            package.json \
+            package-lock.json \
+            next.config.ts \
+            .env.production
+
+      - name: Upload Build to Server
+        uses: appleboy/scp-action@v0.1.7
+        with:
+          host: ${{ secrets.SERVER_IP }}
+          username: ${{ secrets.SERVER_USER }}
+          key: ${{ secrets.SSH_KEY }}
+          source: "build.tar.gz"
+          target: "/var/www/bondbyte/"
+
+      - name: Deploy on Server
+        uses: appleboy/ssh-action@v1.2.0
+        with:
+          host: ${{ secrets.SERVER_IP }}
+          username: ${{ secrets.SERVER_USER }}
+          key: ${{ secrets.SSH_KEY }}
+          script: |
+            set -e
+            cd /var/www/bondbyte
+
+            # nvm-installed node is not on PATH in a non-login shell.
+            export NVM_DIR="$HOME/.nvm"
+            [ -s "$NVM_DIR/nvm.sh" ] && . "$NVM_DIR/nvm.sh"
+
+            echo "Removing old build..."
+            rm -rf .next public package.json package-lock.json next.config.ts .env.production
+
+            echo "Extracting new build..."
+            tar -xzf build.tar.gz -C .
+            rm -f build.tar.gz
+
+            echo "Installing production dependencies..."
+            # Not --omit=dev: next.config.ts is TypeScript and `next start`
+            # must parse it, which needs the typescript package.
+            npm ci
+
+            echo "Restarting service..."
+            # The app runs as a systemd unit (see deploy/bondbyte.service).
+            # Restart, not reload: `next start` has no SIGHUP handler.
+            sudo systemctl restart bondbyte
+
+            # Fail the deploy loudly if the app did not come back up.
+            sleep 3
+            sudo systemctl is-active --quiet bondbyte || {
+              echo "!! bondbyte failed to start" >&2
+              sudo journalctl -u bondbyte -n 40 --no-pager >&2
+              exit 1
+            }
+
+            echo "Bondbyte deployed and running on port 5667"
