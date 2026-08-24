@@ -3,6 +3,10 @@ import { SITE } from "@/lib/constants/site";
 import { PROJECTS } from "@/lib/constants/work";
 import { PUBLISHED_INSIGHTS } from "@/lib/constants/insights";
 
+// Static export has no server to regenerate these at request time, so they are
+// baked into out/ at build time.
+export const dynamic = "force-static";
+
 export default function sitemap(): MetadataRoute.Sitemap {
   const now = new Date();
 

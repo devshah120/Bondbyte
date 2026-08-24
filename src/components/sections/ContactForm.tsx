@@ -13,6 +13,15 @@ import {
 } from "@/lib/validation/contact";
 import { cn } from "@/lib/utils/cn";
 
+/**
+ * External form backend. The site is a static export, so submissions go to a
+ * third-party endpoint rather than an API route of our own. Both values are
+ * baked into the client bundle at build time, which is why the access key must
+ * be a public/submit-only one.
+ */
+const FORM_ENDPOINT = process.env.NEXT_PUBLIC_FORM_ENDPOINT ?? "";
+const FORM_ACCESS_KEY = process.env.NEXT_PUBLIC_FORM_ACCESS_KEY ?? "";
+
 type Status = "idle" | "submitting" | "success" | "error";
 
 /** §23 — validated contact form with animated errors and a polished success state. */
@@ -34,16 +43,42 @@ export function ContactForm() {
     setStatus("submitting");
     setServerError(null);
 
-    try {
-      const response = await fetch("/api/contact", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify(values),
-      });
-      const data: { ok: boolean; error?: string } = await response.json();
+    // The site is a static export, so there is no API route of our own to post
+    // to. FORM_ENDPOINT is an external form service; swapping providers means
+    // changing the env var, not this component.
+    if (!FORM_ENDPOINT) {
+      setServerError(
+        "The contact form is not configured yet. Please email us directly.",
+      );
+      setStatus("error");
+      return;
+    }
 
-      if (!response.ok || !data.ok) {
-        setServerError(data.error ?? "Something went wrong. Please try again.");
+    try {
+      const { website, ...submission } = values;
+      // Honeypot: a filled "website" field means a bot. Report success so the
+      // bot sees no signal, but never send it on.
+      if (website) {
+        reset();
+        setStatus("success");
+        return;
+      }
+
+      const response = await fetch(FORM_ENDPOINT, {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+          Accept: "application/json",
+        },
+        body: JSON.stringify({
+          ...submission,
+          ...(FORM_ACCESS_KEY ? { access_key: FORM_ACCESS_KEY } : {}),
+          subject: `New enquiry from ${submission.name}`,
+        }),
+      });
+
+      if (!response.ok) {
+        setServerError("Something went wrong. Please try again.");
         setStatus("error");
         return;
       }
