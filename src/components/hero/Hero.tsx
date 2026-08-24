@@ -91,7 +91,7 @@ export function Hero() {
           <h1 className="text-display text-[clamp(2.5rem,8.4vw,6.25rem)]">
             <span className="block overflow-hidden pb-[0.06em]">
               <span data-hero="line-1" className="block">
-                Your idea. Our code..
+                Your idea. Our code.
               </span>
             </span>
             <span className="block overflow-hidden pb-[0.06em]">
