@@ -6,8 +6,6 @@ on:
       - main
   workflow_dispatch:
 
-# Two deploys must not overlap: the server deletes the old release before
-# extracting the new one, so an interleaved run would serve a half-written app.
 concurrency:
   group: deploy-production
   cancel-in-progress: false
@@ -15,7 +13,7 @@ concurrency:
 jobs:
   build-deploy:
     runs-on: ubuntu-latest
-    name: Build & Deploy Next.js App
+    name: Build & Deploy Static Site
 
     steps:
       - name: Checkout Repository
@@ -27,44 +25,31 @@ jobs:
           node-version: "22"
           cache: npm
 
-      # .env.production is gitignored, so CI recreates it. These are all
-      # runtime-only (the contact route reads process.env per request), but
-      # shipping the file with the build keeps `next start` self-contained.
+      # NEXT_PUBLIC_* values are inlined into the client bundle at build time,
+      # so they must be present here rather than on the server.
       - name: Create .env.production
         run: |
           cat > .env.production <<EOF
-          PORT=5667
-
-          SMTP_HOST=${{ vars.SMTP_HOST }}
-          SMTP_PORT=${{ vars.SMTP_PORT }}
-          SMTP_USER=${{ vars.SMTP_USER }}
-          SMTP_PASS=${{ secrets.SMTP_PASS }}
-          SMTP_FROM_NAME=${{ vars.SMTP_FROM_NAME }}
-          SMTP_FROM_EMAIL=${{ vars.SMTP_FROM_EMAIL }}
-          CONTACT_TO_EMAIL=${{ vars.CONTACT_TO_EMAIL }}
+          NEXT_PUBLIC_FORM_ENDPOINT=${{ vars.NEXT_PUBLIC_FORM_ENDPOINT }}
+          NEXT_PUBLIC_FORM_ACCESS_KEY=${{ secrets.NEXT_PUBLIC_FORM_ACCESS_KEY }}
           EOF
 
       - name: Install Dependencies
         run: npm ci
 
-      - name: Build Next.js App
+      # next.config.ts sets output: "export", so this emits a self-contained
+      # static site into out/. Nothing runs on the server; nginx serves files.
+      - name: Build Static Site
         run: npm run build
 
-      # Not a static export: src/app/api/contact is a server route handler and
-      # several pages are SSG'd at build time, so we ship the server build.
-      # package-lock.json carries linux binaries for @next/swc and sharp, so
-      # `npm ci` on the server resolves correctly.
-      - name: Archive Build
+      - name: Verify export
         run: |
-          tar -czf build.tar.gz \
-            --exclude='.next/cache' \
-            --exclude='.next/dev' \
-            .next \
-            public \
-            package.json \
-            package-lock.json \
-            next.config.ts \
-            .env.production
+          test -f out/index.html || { echo "!! out/index.html missing"; exit 1; }
+          echo "Exported $(find out -name '*.html' | wc -l) HTML files"
+
+      # Archive the contents of out/, not the directory itself.
+      - name: Archive Build
+        run: tar -czf out.tar.gz -C out .
 
       - name: Upload Build to Server
         uses: appleboy/scp-action@v0.1.7
@@ -72,10 +57,12 @@ jobs:
           host: ${{ secrets.SERVER_IP }}
           username: ${{ secrets.SERVER_USER }}
           key: ${{ secrets.SSH_KEY }}
-          source: "build.tar.gz"
+          source: "out.tar.gz"
           target: "/var/www/bondbyte/"
 
-      - name: Update Build on Server
+      # Only the docroot is replaced. Source files and node_modules on the
+      # server are never touched, so a deploy cannot break the checkout.
+      - name: Publish on Server
         uses: appleboy/ssh-action@v1.2.0
         with:
           host: ${{ secrets.SERVER_IP }}
@@ -85,20 +72,16 @@ jobs:
             set -e
             cd /var/www/bondbyte
 
-            # nvm-installed node is not on PATH in a non-login shell.
-            export NVM_DIR="$HOME/.nvm"
-            [ -s "$NVM_DIR/nvm.sh" ] && . "$NVM_DIR/nvm.sh"
+            rm -rf out.new && mkdir out.new
+            tar -xzf out.tar.gz -C out.new
+            rm -f out.tar.gz
 
-            echo "Removing old build..."
-            rm -rf .next public package.json package-lock.json next.config.ts .env.production
+            test -f out.new/index.html || { echo "!! bad upload"; exit 1; }
 
-            echo "Extracting new build..."
-            tar -xzf build.tar.gz -C .
-            rm -f build.tar.gz
+            # Swap atomically so visitors never see a half-written docroot.
+            rm -rf out.old
+            [ -d out ] && mv out out.old
+            mv out.new out
+            rm -rf out.old
 
-            echo "Installing production dependencies..."
-            # Not --omit=dev: next.config.ts is TypeScript and `next start`
-            # must parse it, which needs the typescript package.
-            npm ci
-
-            echo "Build updated in /var/www/bondbyte"
+            echo "Published $(find out -name '*.html' | wc -l) HTML files"
