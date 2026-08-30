@@ -1,10 +1,8 @@
 import type { Metadata } from "next";
-import Image from "next/image";
 import { PageHeader } from "@/components/ui/PageHeader";
 import { Reveal } from "@/components/animations/Reveal";
 import { ProcessTimeline } from "@/components/sections/ProcessTimeline";
 import { CTASection } from "@/components/sections/CTASection";
-import { SectionHeading } from "@/components/ui/SectionHeading";
 import { TEAM } from "@/lib/constants/company";
 import { SITE } from "@/lib/constants/site";
 
@@ -58,39 +56,6 @@ export default function AboutPage() {
               </Reveal>
             </div>
           </div>
-        </div>
-      </section>
-
-      <section className="border-t border-line py-24 lg:py-32">
-        <div className="container-page">
-          <SectionHeading
-            eyebrow="Team"
-            lines={["The people", "who build it."]}
-            className="mb-16"
-          />
-
-          <Reveal staggerChildren className="grid gap-x-8 gap-y-12 sm:grid-cols-2 lg:grid-cols-3">
-            {TEAM.map((member) => (
-              <div key={member.name} className="group">
-                <div className="relative aspect-[4/5] overflow-hidden rounded-lg border border-line bg-surface">
-                  <Image
-                    src={member.image}
-                    alt={member.name}
-                    fill
-                    sizes="(max-width: 640px) 100vw, (max-width: 1024px) 50vw, 33vw"
-                    className="object-cover grayscale transition-all duration-700 ease-[cubic-bezier(0.16,1,0.3,1)] group-hover:scale-[1.03] group-hover:grayscale-0"
-                  />
-                  <div className="pointer-events-none absolute inset-0 bg-gradient-to-t from-bg/70 via-transparent to-transparent" />
-                </div>
-                <h3 className="mt-5 text-[1.0625rem] font-medium tracking-tight text-fg">
-                  {member.name}
-                </h3>
-                <p className="mt-1 font-mono text-[0.6875rem] uppercase tracking-[0.14em] text-fg-subtle">
-                  {member.role}
-                </p>
-              </div>
-            ))}
-          </Reveal>
         </div>
       </section>
 
