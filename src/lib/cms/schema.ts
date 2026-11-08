@@ -625,9 +625,10 @@ export const SECTION_TYPES: Record<string, SectionDef> = {
           label: "Style",
           type: "select",
           required: true,
+          default: "dark",
           options: [
+            { value: "dark", label: "Dark (standard)" },
             { value: "light", label: "Light" },
-            { value: "dark", label: "Dark" },
           ],
         },
       ]),

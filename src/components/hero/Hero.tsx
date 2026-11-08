@@ -2,6 +2,7 @@
 
 import { useEffect, useRef } from "react";
 import { MagneticButton } from "@/components/ui/MagneticButton";
+import { TechMarquee } from "@/components/hero/TechMarquee";
 import { EASE, prefersReducedMotion, registerGsap } from "@/lib/animations/gsap";
 
 export interface HeroData {
@@ -16,7 +17,7 @@ export interface HeroData {
 }
 
 /** Hero with the staged GSAP entrance timeline from §10. */
-export function Hero({ data }: { data: HeroData }) {
+export function Hero({ data, technologies }: { data: HeroData; technologies: readonly string[] }) {
   const rootRef = useRef<HTMLElement>(null);
 
   useEffect(() => {
@@ -82,6 +83,7 @@ export function Hero({ data }: { data: HeroData }) {
       {/* Layered backdrop: grid + radial glow */}
       <div data-hero="visual" className="absolute inset-0 opacity-0">
         <div className="bg-grid absolute inset-0 [mask-image:radial-gradient(ellipse_at_60%_40%,#000_10%,transparent_72%)]" />
+        <TechMarquee names={technologies} />
         <div className="pointer-events-none absolute -right-1/4 top-1/4 h-[36rem] w-[36rem] rounded-full bg-accent/[0.09] blur-[130px]" />
         <div className="pointer-events-none absolute inset-x-0 bottom-0 h-52 bg-gradient-to-t from-bg to-transparent" />
       </div>

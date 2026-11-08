@@ -38,10 +38,10 @@ export function SectionView({ section, content }: { section: Section; content: S
 
   switch (section.type) {
     case "hero":
-      return <Hero data={data as unknown as HeroData} />;
+      return <Hero data={data as unknown as HeroData} technologies={content.technologies.map((tech) => tech.name)} />;
 
     case "pageHeader":
-      return <PageHeader eyebrow={heading.eyebrow ?? ""} lines={heading.heading} description={heading.description} dark={str("style") === "dark"} />;
+      return <PageHeader eyebrow={heading.eyebrow ?? ""} lines={heading.heading} description={heading.description} dark={str("style") !== "light"} />;
 
     case "positioning":
       return <Positioning data={data as unknown as PositioningData} />;

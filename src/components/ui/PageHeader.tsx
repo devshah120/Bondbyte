@@ -4,12 +4,12 @@ interface PageHeaderProps {
   eyebrow: string;
   lines: readonly string[];
   description?: string;
-  /** Dark editorial masthead, as on the insights page. */
+  /** Dark editorial masthead (default). */
   dark?: boolean;
 }
 
-/** Consistent hero band for every interior page. */
-export function PageHeader({ eyebrow, lines, description, dark = false }: PageHeaderProps) {
+/** Consistent dark masthead for every interior page; "light" keeps the original pale band. */
+export function PageHeader({ eyebrow, lines, description, dark = true }: PageHeaderProps) {
   if (dark) {
     return (
       <section data-band="dark" className="relative overflow-hidden pt-36 pb-20 lg:pt-44 lg:pb-28">

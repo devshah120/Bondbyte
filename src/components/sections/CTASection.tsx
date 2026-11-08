@@ -3,6 +3,7 @@
 import { useRef } from "react";
 import { AnimatedText } from "@/components/animations/AnimatedText";
 import { MagneticButton } from "@/components/ui/MagneticButton";
+import { DotMatrixBackground } from "@/components/sections/DotMatrixBackground";
 
 export interface CtaData {
   heading: string[];
@@ -33,7 +34,11 @@ export function CTASection({ data, email }: { data: CtaData; email: string }) {
         className="relative overflow-hidden py-32 lg:py-48"
         style={{ ["--mx" as string]: "50%", ["--my" as string]: "50%" }}
       >
-        <div className="bg-grid absolute inset-0 opacity-50 [mask-image:radial-gradient(ellipse_at_center,#000_15%,transparent_70%)]" />
+        <div
+          aria-hidden
+          className="absolute inset-0 bg-[linear-gradient(to_bottom,#0c1832_0%,#173463_35%,#2f6fed_70%,#bfe0ff_100%)]"
+        />
+        <DotMatrixBackground />
 
         {/* Follows the cursor across the section */}
         <div
@@ -45,15 +50,18 @@ export function CTASection({ data, email }: { data: CtaData; email: string }) {
           }}
         />
 
-        <div className="container-page relative text-center">
+        <div
+          className="container-page relative text-center"
+          style={{ textShadow: "0 2px 16px rgba(6, 16, 38, 0.45)" }}
+        >
           <AnimatedText
             as="h2"
             lines={data.heading}
-            className="text-display mx-auto text-[clamp(2.4rem,7vw,5.25rem)]"
+            className="text-display mx-auto text-[clamp(2.4rem,7vw,5.25rem)] text-white"
           />
 
           {data.text && (
-            <p className="mx-auto mt-8 max-w-xl text-[1.0625rem] leading-relaxed text-fg-muted">
+            <p className="mx-auto mt-8 max-w-xl text-[1.0625rem] leading-relaxed text-white/80">
               {data.text}
             </p>
           )}
@@ -61,7 +69,7 @@ export function CTASection({ data, email }: { data: CtaData; email: string }) {
           <div className="mt-12 flex flex-col items-center justify-center gap-5 sm:flex-row">
             {data.buttonLabel && data.buttonHref && <MagneticButton href={data.buttonHref}>{data.buttonLabel}</MagneticButton>}
             {data.showEmail && (
-              <a href={`mailto:${email}`} className="text-sm text-fg-muted transition-colors hover:text-fg">
+              <a href={`mailto:${email}`} className="text-sm text-white/80 transition-colors hover:text-white">
                 {email}
               </a>
             )}

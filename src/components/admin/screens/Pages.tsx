@@ -41,7 +41,7 @@ function AddPage({ copyOf, onClose }: { copyOf?: Page; onClose: () => void }) {
     }
     const sections = copyOf
       ? copyOf.sections.map((section) => ({ ...structuredClone(section), id: makeId() }))
-      : [{ ...newSection("pageHeader"), data: { ...defaultsFor(fieldsOf(SECTION_TYPES.pageHeader.groups)), eyebrow: title.trim(), heading: [title.trim()], style: "light" } }, newSection("cta")];
+      : [{ ...newSection("pageHeader"), data: { ...defaultsFor(fieldsOf(SECTION_TYPES.pageHeader.groups)), eyebrow: title.trim(), heading: [title.trim()], style: "dark" } }, newSection("cta")];
     setBusy(true);
     try {
       const saved = await api.putPage(id, { title: title.trim(), slug, published: false, seoTitle: "", seoDescription: copyOf?.seoDescription ?? "", sections }, 0);

@@ -31,7 +31,8 @@ const cta = section("cta", {
 // Every page ends with the same call to action, each with its own id.
 const closing = () => ({ ...structuredClone(cta), id: makeId() });
 
-const pageHeader = (eyebrow: string, heading: string[], description: string, style = "light") =>
+// Every inner page opens with the dark masthead (the style the insights page started with).
+const pageHeader = (eyebrow: string, heading: string[], description: string, style = "dark") =>
   section("pageHeader", { eyebrow, heading, description, style });
 
 function page(id: string, title: string, slug: string, seoDescription: string, sections: Section[], seoTitle = ""): Page {
@@ -99,7 +100,6 @@ function defaultPages(): Page[] {
             "We work with founders and teams who need the whole path covered: shaping the idea, designing the interface, engineering the system and staying involved once it is live.",
           ],
         }),
-        section("team", { eyebrow: "Team", heading: ["The people", "who build it."] }),
         section("process", {
           eyebrow: "Process",
           heading: ["From first conversation", "to production."],
@@ -197,7 +197,6 @@ function defaultPages(): Page[] {
           "Insights",
           ["Notes from", "the build."],
           "What we have learned designing, engineering and shipping products — scoping, architecture, interface work and the parts that only show up once something is live. Honest, occasionally opinionated.",
-          "dark",
         ),
         section("insightsList"),
         closing(),
