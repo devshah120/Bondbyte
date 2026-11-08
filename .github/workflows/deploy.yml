@@ -117,16 +117,40 @@ jobs:
             rm -f release.tar.gz
             test -f "$release/server.js" || { echo "!! bad upload"; rm -rf "$release"; exit 1; }
 
-            ln -sfn "$(pwd)/$release" current.new && mv -T current.new current
-            pm2 startOrReload current/ecosystem.config.cjs --update-env
-            pm2 save
+            # The port lives in one place: the ecosystem file of the release.
+            port="$(node -p "require('./$release/ecosystem.config.cjs').apps[0].env.PORT")"
+            previous="$(readlink current || true)"
 
-            # Wait for the new server to answer before calling it done.
-            for i in $(seq 1 20); do
-              curl -fsS -o /dev/null http://127.0.0.1:3000/robots.txt && break
-              sleep 1
-            done
-            curl -fsS -o /dev/null http://127.0.0.1:3000/robots.txt || { echo "!! server did not start"; pm2 logs bondbyte --lines 40 --nostream; exit 1; }
+            ln -sfn "$(pwd)/$release" current.new && mv -T current.new current
+
+            # Recreated rather than reloaded, so port, env file and paths always
+            # come from the new ecosystem file (fork mode restarts either way).
+            pm2 delete bondbyte >/dev/null 2>&1 || true
+            sleep 1
+            if ss -ltn "( sport = :$port )" | grep -q LISTEN; then
+              echo "!! Port $port is already used by another app on this server:"
+              ss -ltnp "( sport = :$port )" || true
+              echo "!! Choose a free PORT in deploy/ecosystem.config.cjs and in deploy/nginx-bondbyte.conf"
+              exit 1
+            fi
+            pm2 start current/ecosystem.config.cjs
+
+            # Done only when BondByte itself answers: the admin session endpoint
+            # is ours, so another app on the same port cannot pass this check.
+            healthy() { curl -fsS "http://127.0.0.1:$port/api/admin/session" 2>/dev/null | grep -q '"canSignIn"'; }
+            for i in $(seq 1 30); do healthy && break; sleep 1; done
+            if ! healthy; then
+              echo "!! BondByte did not start on port $port"
+              pm2 logs bondbyte --lines 60 --nostream || true
+              if [ -n "$previous" ] && [ -d "$previous" ]; then
+                echo "Rolling back to $previous"
+                ln -sfn "$previous" current.new && mv -T current.new current
+                pm2 delete bondbyte >/dev/null 2>&1 || true
+                pm2 start current/ecosystem.config.cjs || true
+              fi
+              exit 1
+            fi
+            pm2 save
 
             # Keep the three newest releases for a quick rollback.
             ls -1dt releases/*/ | tail -n +4 | xargs -r rm -rf
