@@ -41,9 +41,12 @@ jobs:
       # sit next to it, and pm2 needs its process file in the release.
       - name: Assemble Release
         run: |
-          cp -r public .next/standalone/public
-          mkdir -p .next/standalone/.next
-          cp -r .next/static .next/standalone/.next/static
+          mkdir -p .next/standalone/public .next/standalone/.next/static
+          # Copy the contents ("dir/.") so they merge: the build already creates a
+          # partial public/ there, and copying the folder itself would nest it.
+          cp -r public/. .next/standalone/public/
+          diff -rq public .next/standalone/public || { echo "!! public/ was not copied completely"; exit 1; }
+          cp -r .next/static/. .next/standalone/.next/static/
           cp deploy/ecosystem.config.cjs .next/standalone/
           test -f .next/standalone/server.js || { echo "!! server.js missing"; exit 1; }
           tar -czf release.tar.gz -C .next/standalone .
