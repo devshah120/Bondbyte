@@ -61,19 +61,55 @@ jobs:
       # `current` symlink, so a failed upload never touches the running site.
       # The data folder (content, inquiries, uploads) is outside the releases
       # and is never touched by a deploy.
+      #
+      # The server's env file (admin login, session secret, SMTP) is written
+      # from GitHub secrets on every deploy, so they are managed in one place:
+      # Settings → Secrets and variables → Actions. Without ADMIN_PASSWORD the
+      # file already on the server is used instead.
       - name: Publish on Server
         uses: appleboy/ssh-action@v1.2.0
+        env:
+          ADMIN_USERNAME: ${{ secrets.ADMIN_USERNAME }}
+          ADMIN_PASSWORD: ${{ secrets.ADMIN_PASSWORD }}
+          TOKEN_SECRET: ${{ secrets.TOKEN_SECRET }}
+          SMTP_HOST: ${{ secrets.SMTP_HOST }}
+          SMTP_PORT: ${{ secrets.SMTP_PORT }}
+          SMTP_USER: ${{ secrets.SMTP_USER }}
+          SMTP_PASS: ${{ secrets.SMTP_PASS }}
+          SMTP_FROM_NAME: ${{ secrets.SMTP_FROM_NAME }}
+          SMTP_FROM_EMAIL: ${{ secrets.SMTP_FROM_EMAIL }}
+          CONTACT_TO_EMAIL: ${{ secrets.CONTACT_TO_EMAIL }}
         with:
           host: ${{ secrets.SERVER_IP }}
           username: ${{ secrets.SERVER_USER }}
           key: ${{ secrets.SSH_KEY }}
+          envs: ADMIN_USERNAME,ADMIN_PASSWORD,TOKEN_SECRET,SMTP_HOST,SMTP_PORT,SMTP_USER,SMTP_PASS,SMTP_FROM_NAME,SMTP_FROM_EMAIL,CONTACT_TO_EMAIL
           script: |
             set -e
             cd /var/www/bondbyte
 
             command -v pm2 >/dev/null || { echo "!! pm2 is not installed on the server (see README: First-time server setup)"; exit 1; }
-            test -f shared/.env || { echo "!! /var/www/bondbyte/shared/.env is missing (see README)"; exit 1; }
-            mkdir -p releases data
+            mkdir -p releases data shared
+
+            if [ -n "$ADMIN_PASSWORD" ]; then
+              [ -n "$TOKEN_SECRET" ] || { echo "!! Add a TOKEN_SECRET secret in GitHub (Settings → Secrets and variables → Actions)"; exit 1; }
+              umask 077
+              {
+                for name in ADMIN_USERNAME ADMIN_PASSWORD TOKEN_SECRET SMTP_HOST SMTP_PORT SMTP_USER SMTP_PASS SMTP_FROM_NAME SMTP_FROM_EMAIL CONTACT_TO_EMAIL; do
+                  value="$(printenv "$name" || true)"
+                  [ -n "$value" ] || continue
+                  # Values are written single-quoted, so they cannot contain a quote or a line break.
+                  if [ "$(printf '%s' "$value" | wc -l)" -ne 0 ] || [ "${value#*\'}" != "$value" ]; then
+                    echo "!! The $name secret contains a ' or a line break, which the env file cannot hold" >&2; exit 1
+                  fi
+                  printf "%s='%s'\n" "$name" "$value"
+                done
+              } > shared/.env.new
+              mv shared/.env.new shared/.env
+              chmod 600 shared/.env
+              echo "Wrote shared/.env from GitHub secrets"
+            fi
+            test -f shared/.env || { echo "!! No env file: add ADMIN_PASSWORD and TOKEN_SECRET secrets in GitHub (Settings → Secrets and variables → Actions), then re-run"; exit 1; }
 
             release="releases/$(date +%Y%m%d%H%M%S)-$(echo "${{ github.sha }}" | cut -c1-7)"
             mkdir -p "$release"

@@ -120,11 +120,21 @@ pm2 startup            # follow the printed command so pm2 starts on boot
 # Folders (owned by the deploy user)
 sudo mkdir -p /var/www/bondbyte/{releases,shared,data}
 sudo chown -R $USER /var/www/bondbyte
-
-# Secrets: copy .env.example and fill in ADMIN_PASSWORD, TOKEN_SECRET and SMTP_*
-nano /var/www/bondbyte/shared/.env
-chmod 600 /var/www/bondbyte/shared/.env
 ```
+
+Then add the server's secrets in GitHub under **Settings → Secrets and
+variables → Actions → New repository secret**. Every deploy writes them to
+`/var/www/bondbyte/shared/.env` (readable only by the deploy user):
+
+| Secret | Needed | Value |
+| --- | --- | --- |
+| `ADMIN_PASSWORD` | yes | The starting admin password (change it later in the panel). |
+| `TOKEN_SECRET` | yes | A long random string: `node -e "console.log(require('crypto').randomBytes(32).toString('hex'))"` |
+| `ADMIN_USERNAME` | no | Defaults to `admin`. |
+| `SMTP_HOST`, `SMTP_PORT`, `SMTP_USER`, `SMTP_PASS`, `SMTP_FROM_NAME`, `SMTP_FROM_EMAIL`, `CONTACT_TO_EMAIL` | no | Email copies of new inquiries (same as `.env.example`). |
+
+Secret values cannot contain a `'` or a line break. If `ADMIN_PASSWORD` is not
+set, the deploy uses an env file you created on the server by hand instead.
 
 Then push (or run the workflow by hand) and, once it reports `Published`,
 switch nginx from the static folder to the Node server:
