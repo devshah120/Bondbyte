@@ -40,3 +40,7 @@ yarn-error.log*
 # typescript
 *.tsbuildinfo
 next-env.d.ts
+
+# CMS data: content, inquiries, uploads, history and the admin login.
+# Lives on the server, never in git.
+/data/

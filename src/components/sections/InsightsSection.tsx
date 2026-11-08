@@ -1,10 +1,7 @@
 import Link from "next/link";
 import { ArrowUpRight } from "lucide-react";
-import {
-  FEATURED_INSIGHT,
-  PUBLISHED_INSIGHTS,
-  formatInsightDate,
-} from "@/lib/constants/insights";
+import type { HeadingData, Insight } from "@/lib/cms/types";
+import { formatInsightDate } from "@/lib/format";
 import { SectionHeading } from "@/components/ui/SectionHeading";
 import { Reveal } from "@/components/animations/Reveal";
 import { InsightCover } from "@/components/ui/InsightCover";
@@ -13,11 +10,21 @@ import { InsightCover } from "@/components/ui/InsightCover";
  * Insights index: one featured article plus recent secondary pieces.
  * Server component — no interactivity beyond links, so it ships no JS.
  */
-export function InsightsSection({ limit = 4 }: { limit?: number }) {
-  const featured = FEATURED_INSIGHT;
+export function InsightsSection({
+  heading,
+  featured,
+  insights,
+  limit = 4,
+}: {
+  heading: HeadingData;
+  featured: Insight | undefined;
+  insights: Insight[];
+  limit?: number;
+}) {
+
   if (!featured) return null;
 
-  const secondary = PUBLISHED_INSIGHTS.filter((i) => i.slug !== featured.slug).slice(
+  const secondary = insights.filter((i) => i.slug !== featured.slug).slice(
     0,
     limit - 1,
   );
@@ -26,7 +33,7 @@ export function InsightsSection({ limit = 4 }: { limit?: number }) {
     <section className="border-t border-line py-28 lg:py-36">
       <div className="container-page">
         <div className="mb-14 flex flex-col gap-6 lg:flex-row lg:items-end lg:justify-between">
-          <SectionHeading eyebrow="Insights" lines={["What we've learned", "building things."]} />
+          <SectionHeading eyebrow={heading.eyebrow} lines={heading.heading} />
           <Link
             href="/insights"
             className="group inline-flex shrink-0 items-center gap-2 text-sm text-fg-muted transition-colors hover:text-fg"

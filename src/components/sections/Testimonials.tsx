@@ -1,16 +1,17 @@
-import { TESTIMONIALS } from "@/lib/constants/company";
+import type { Testimonial } from "@/lib/cms/types";
 import { AnimatedText } from "@/components/animations/AnimatedText";
 
 /**
  * §21 — cinematic quote section.
  *
- * Renders nothing while TESTIMONIALS is empty. This is deliberate: no verified
- * client testimonials exist yet, and placeholder quotes must never be shown as
- * if they were real. Add entries to the constant and the section appears.
+ * Renders nothing while there are no testimonials. This is deliberate:
+ * placeholder quotes must never be shown as if they were real. Add one under
+ * Testimonials in the admin panel and the section appears.
  */
-export function Testimonials() {
-  const [featured] = TESTIMONIALS;
+export function Testimonials({ eyebrow, testimonials }: { eyebrow: string; testimonials: Testimonial[] }) {
+  const [featured] = testimonials;
   if (!featured) return null;
+  const attribution = [featured.role, featured.company].filter(Boolean).join(", ");
 
   return (
     <section className="relative overflow-hidden border-t border-line py-32 lg:py-44">
@@ -18,7 +19,7 @@ export function Testimonials() {
 
       <div className="container-page relative">
         <figure className="mx-auto max-w-4xl text-center">
-          <span className="text-eyebrow">Client</span>
+          {eyebrow && <span className="text-eyebrow">{eyebrow}</span>}
           <AnimatedText
             as="div"
             lines={[`“${featured.quote}”`]}
@@ -26,8 +27,12 @@ export function Testimonials() {
           />
           <figcaption className="mt-10 text-sm text-fg-muted">
             <span className="text-fg">{featured.author}</span>
-            <span className="mx-2 text-fg-subtle">·</span>
-            {featured.role}, {featured.company}
+            {attribution && (
+              <>
+                <span className="mx-2 text-fg-subtle">·</span>
+                {attribution}
+              </>
+            )}
           </figcaption>
         </figure>
       </div>

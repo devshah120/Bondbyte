@@ -1,5 +1,10 @@
-import type { ContactInput } from "@/lib/validation/contact";
-import { SITE } from "@/lib/constants/site";
+import type { Inquiry } from "@/lib/cms/types";
+
+/** The studio details an email is sent on behalf of (from General settings). */
+export interface SiteIdentity {
+  name: string;
+  email: string;
+}
 
 /**
  * Pluggable email transport.
@@ -50,7 +55,7 @@ interface SmtpConfig {
 }
 
 /** Reads and validates SMTP_* env vars. Returns null when not fully configured. */
-function readSmtpConfig(): SmtpConfig | null {
+function readSmtpConfig(site: SiteIdentity): SmtpConfig | null {
   const host = process.env.SMTP_HOST?.trim();
   const user = process.env.SMTP_USER?.trim();
   const pass = process.env.SMTP_PASS;
@@ -74,7 +79,7 @@ function readSmtpConfig(): SmtpConfig | null {
     secure,
     user,
     pass,
-    fromName: process.env.SMTP_FROM_NAME?.trim() || SITE.name,
+    fromName: process.env.SMTP_FROM_NAME?.trim() || site.name,
     fromEmail: process.env.SMTP_FROM_EMAIL?.trim() || user,
   };
 }
@@ -83,11 +88,11 @@ function readSmtpConfig(): SmtpConfig | null {
  * Returns the active provider, or null when none is configured.
  *
  * Set SMTP_HOST, SMTP_USER and SMTP_PASS (see .env.example) to enable sending.
- * Until then the API validates and logs submissions but does not deliver mail,
- * and the route reports that honestly instead of pretending to have sent.
+ * Enquiries are always saved and shown in the admin panel; email is only an
+ * extra notification, so without SMTP nothing is lost.
  */
-export function getEmailProvider(): EmailProvider | null {
-  const config = readSmtpConfig();
+export function getEmailProvider(site: SiteIdentity): EmailProvider | null {
+  const config = readSmtpConfig(site);
   if (!config) return null;
 
   return {
@@ -144,12 +149,12 @@ function escapeHtml(value: string): string {
 }
 
 /** Formats a submission into the message delivered to the studio inbox. */
-export function formatSubmission(input: ContactInput): ContactSubmission {
+export function formatSubmission(input: Inquiry, site: SiteIdentity): ContactSubmission {
   const fields: readonly (readonly [string, string])[] = [
     ["Name", input.name],
     ["Email", input.email],
     ["Company", input.company || "—"],
-    ["Type", input.projectType],
+    ["Type", input.projectType || "—"],
     ["Budget", input.budget ? input.budget : "—"],
   ];
 
@@ -173,7 +178,7 @@ export function formatSubmission(input: ContactInput): ContactSubmission {
   const html =
     `<div style="background:#f6f7f9;padding:32px 16px">` +
     `<div style="max-width:560px;margin:0 auto;background:#fff;border:1px solid #e5e7eb;border-radius:10px;padding:28px 30px">` +
-    `<p style="margin:0 0 20px;color:#6b7280;font:600 11px/1 -apple-system,BlinkMacSystemFont,'Segoe UI',sans-serif;letter-spacing:.12em;text-transform:uppercase">New enquiry — ${escapeHtml(SITE.name)}</p>` +
+    `<p style="margin:0 0 20px;color:#6b7280;font:600 11px/1 -apple-system,BlinkMacSystemFont,'Segoe UI',sans-serif;letter-spacing:.12em;text-transform:uppercase">New enquiry — ${escapeHtml(site.name)}</p>` +
     `<table cellpadding="0" cellspacing="0" border="0" style="width:100%;border-collapse:collapse">${rows}</table>` +
     `<div style="margin:22px 0 0;padding:18px 0 0;border-top:1px solid #e5e7eb">` +
     `<p style="margin:0 0 8px;color:#6b7280;font:500 13px/1.5 -apple-system,BlinkMacSystemFont,'Segoe UI',sans-serif">Message</p>` +
@@ -183,9 +188,9 @@ export function formatSubmission(input: ContactInput): ContactSubmission {
     `</div></div>`;
 
   return {
-    to: process.env.CONTACT_TO_EMAIL?.trim() || SITE.email,
+    to: process.env.CONTACT_TO_EMAIL?.trim() || site.email,
     replyTo: input.email,
-    subject: `New enquiry — ${input.projectType} — ${input.name}`,
+    subject: `New enquiry — ${input.projectType || "General"} — ${input.name}`,
     text,
     html,
   };

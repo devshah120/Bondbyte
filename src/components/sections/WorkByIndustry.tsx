@@ -4,39 +4,45 @@ import { useState } from "react";
 import { AnimatePresence, motion } from "framer-motion";
 import { ArrowRight, Check } from "lucide-react";
 import Link from "next/link";
-import {
-  INDUSTRIES,
-  TIER_LABELS,
-  TIER_ORDER,
-  YEARLY_DISCOUNT,
-  formatINR,
-  yearlyPrice,
-  type PackageTier,
-} from "@/lib/constants/industries";
+import type { HeadingData, Industry, PackageTier } from "@/lib/cms/types";
+import { formatINR, yearlyPrice } from "@/lib/format";
 import { SectionHeading } from "@/components/ui/SectionHeading";
 import { PackageDrawer } from "./PackageDrawer";
 import { cn } from "@/lib/utils/cn";
 
 type Billing = "monthly" | "yearly";
 
+const TIER_ORDER: readonly PackageTier[] = ["normal", "exclusive", "complete"];
+
 /**
  * Industry → package configurator.
  *
- * One reusable UI renders every industry from `INDUSTRIES`; adding an industry
+ * One reusable UI renders every industry from the content; adding an industry
  * is a data change. Selection, tier and billing period are all local state, so
  * every transition happens without a navigation.
  */
-export function WorkByIndustry() {
-  const [industryId, setIndustryId] = useState(INDUSTRIES[0].id);
+export function WorkByIndustry({
+  heading,
+  industries,
+  discount,
+  tierLabels,
+}: {
+  heading: HeadingData;
+  industries: Industry[];
+  discount: number;
+  tierLabels: Record<PackageTier, string>;
+}) {
+  const [industryId, setIndustryId] = useState(industries[0]?.id ?? "");
   const [tier, setTier] = useState<PackageTier>("exclusive");
   const [billing, setBilling] = useState<Billing>("monthly");
   const [drawerOpen, setDrawerOpen] = useState(false);
 
-  const industry = INDUSTRIES.find((i) => i.id === industryId) ?? INDUSTRIES[0];
-  const pkg = industry.packages[tier];
+  const industry = industries.find((i) => i.id === industryId) ?? industries[0];
+  if (!industry) return null;
+  const pkg = industry[tier];
 
   const price =
-    billing === "monthly" ? pkg.monthlyPrice : yearlyPrice(pkg);
+    billing === "monthly" ? pkg.monthlyPrice : yearlyPrice(pkg.monthlyPrice, discount);
   const priceSuffix = billing === "monthly" ? "/month" : "/year";
 
   return (
@@ -49,9 +55,9 @@ export function WorkByIndustry() {
 
       <div className="container-page relative">
         <SectionHeading
-          eyebrow="Work by industry"
-          lines={["Solutions shaped", "around your sector."]}
-          description="Pick your industry to see the work it involves, what each package covers and what it costs."
+          eyebrow={heading.eyebrow}
+          lines={heading.heading}
+          description={heading.description}
           className="mb-14"
         />
 
@@ -59,7 +65,7 @@ export function WorkByIndustry() {
           {/* Industry navigation */}
           <nav aria-label="Industries" className="lg:col-span-4">
             <ul className="border-t border-line">
-              {INDUSTRIES.map((item, i) => {
+              {industries.map((item, i) => {
                 const isActive = item.id === industryId;
                 return (
                   <li key={item.id} className="border-b border-line">
@@ -145,7 +151,7 @@ export function WorkByIndustry() {
                         className="absolute inset-0 rounded-full bg-fg"
                       />
                     )}
-                    <span className="relative">{TIER_LABELS[t]}</span>
+                    <span className="relative">{tierLabels[t]}</span>
                   </button>
                 ))}
               </div>
@@ -180,7 +186,7 @@ export function WorkByIndustry() {
                   ))}
                 </div>
                 <span className="rounded-full border border-accent-hi/40 bg-accent/15 px-2.5 py-1 font-mono text-[0.5625rem] uppercase tracking-[0.14em] text-accent-hi">
-                  Save {Math.round(YEARLY_DISCOUNT * 100)}%
+                  Save {discount}%
                 </span>
               </div>
             </div>
@@ -291,6 +297,7 @@ export function WorkByIndustry() {
         pkg={pkg}
         industryName={industry.name}
         billing={billing}
+        discount={discount}
       />
     </section>
   );

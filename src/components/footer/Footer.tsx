@@ -1,15 +1,15 @@
 import Link from "next/link";
 import { ArrowUpRight } from "lucide-react";
-import { NAV_LINKS, SITE, SOCIALS } from "@/lib/constants/site";
-import { SERVICES } from "@/lib/constants/company";
+import type { SiteContent } from "@/lib/cms/types";
+import { fillTokens, phoneHref, tokenValues } from "@/lib/cms/content";
 import { UdyamMark } from "@/components/ui/UdyamMark";
 
-/** Server component — no interactivity, so no client bundle cost. */
-export function Footer() {
+/** Server component — no interactivity, so no client bundle cost. Edited under Footer. */
+export function Footer({ content }: { content: SiteContent }) {
+  const { footer, settings, brand, services } = content;
   const year = new Date().getFullYear();
-  const socials = SOCIALS.filter(
-    (s): s is { label: string; url: string } => s.url !== null,
-  );
+  const location = [settings.city, settings.region].filter(Boolean).join(", ");
+  const shownServices = services.slice(0, footer.servicesCount);
 
   return (
     <footer data-band="dark" className="relative overflow-hidden border-t border-line">
@@ -17,53 +17,57 @@ export function Footer() {
         <div className="grid gap-14 lg:grid-cols-[1.4fr_1fr_1fr_1fr]">
           <div>
             <Link href="/" className="text-lg font-semibold tracking-tight">
-              Bond<span className="text-accent-hi">Byte</span>
+              {brand.wordFirst}
+              {brand.wordSecond && <span className="text-accent-hi">{brand.wordSecond}</span>}
             </Link>
-            <p className="mt-5 max-w-xs text-sm leading-relaxed text-fg-muted">
-              Strategy, design and engineering under one roof. Built in{" "}
-              {SITE.location.city}, working with teams anywhere.
-            </p>
+            {footer.blurb && (
+              <p className="mt-5 max-w-xs text-sm leading-relaxed text-fg-muted">
+                {fillTokens(footer.blurb, tokenValues(content))}
+              </p>
+            )}
             <a
-              href={`mailto:${SITE.email}`}
+              href={`mailto:${settings.email}`}
               className="group mt-7 inline-flex items-center gap-1.5 text-sm text-fg transition-colors hover:text-accent-hi"
             >
-              {SITE.email}
+              {settings.email}
               <ArrowUpRight className="h-3.5 w-3.5 transition-transform group-hover:translate-x-0.5 group-hover:-translate-y-0.5" />
             </a>
           </div>
 
-          <FooterColumn title="Navigate">
-            {NAV_LINKS.map((link) => (
-              <FooterLink key={link.href} href={link.href}>
-                {link.label}
-              </FooterLink>
-            ))}
-            <FooterLink href="/insights">Insights</FooterLink>
-            <FooterLink href="/contact">Contact</FooterLink>
-          </FooterColumn>
+          {footer.navLinks.length > 0 && (
+            <FooterColumn title={footer.navTitle}>
+              {footer.navLinks.map((link) => (
+                <FooterLink key={link.id} href={link.href}>
+                  {link.label}
+                </FooterLink>
+              ))}
+            </FooterColumn>
+          )}
 
-          <FooterColumn title="Services">
-            {SERVICES.slice(0, 6).map((service) => (
-              <FooterLink key={service.index} href="/services">
-                {service.title}
-              </FooterLink>
-            ))}
-          </FooterColumn>
+          {shownServices.length > 0 && (
+            <FooterColumn title={footer.servicesTitle}>
+              {shownServices.map((service) => (
+                <FooterLink key={service.id} href="/services">
+                  {service.title}
+                </FooterLink>
+              ))}
+            </FooterColumn>
+          )}
 
-          <FooterColumn title="Contact">
-            <li>
-              <a
-                href={SITE.phoneHref}
-                className="text-sm text-fg-muted transition-colors hover:text-fg"
-              >
-                {SITE.phone}
-              </a>
-            </li>
-            <li className="text-sm text-fg-muted">
-              {SITE.location.city}, {SITE.location.region}
-            </li>
-            {socials.map((social) => (
-              <li key={social.label}>
+          <FooterColumn title={footer.contactTitle}>
+            {settings.phone && (
+              <li>
+                <a
+                  href={phoneHref(settings.phone)}
+                  className="text-sm text-fg-muted transition-colors hover:text-fg"
+                >
+                  {settings.phone}
+                </a>
+              </li>
+            )}
+            {location && <li className="text-sm text-fg-muted">{location}</li>}
+            {footer.socials.map((social) => (
+              <li key={social.id}>
                 <a
                   href={social.url}
                   target="_blank"
@@ -81,7 +85,7 @@ export function Footer() {
         <div className="mt-16 flex flex-col gap-6 border-t border-line pt-7 lg:flex-row lg:items-center lg:justify-between">
           <div className="flex flex-wrap items-center gap-x-4 gap-y-2 font-mono text-[0.6875rem] uppercase tracking-[0.14em] text-fg-subtle">
             <span>
-              © {year} {SITE.legalName}
+              © {year} {settings.legalName}
             </span>
             <span aria-hidden>·</span>
             <Link href="/privacy" className="transition-colors hover:text-fg">
@@ -93,20 +97,24 @@ export function Footer() {
             </Link>
           </div>
 
-          <div className="flex flex-wrap items-center gap-x-4 gap-y-3 font-mono text-[0.6875rem] uppercase tracking-[0.14em] text-fg-subtle">
-            <span>UDYAM-GJ-01-0132398</span>
-            <span aria-hidden>·</span>
-            <UdyamMark />
-          </div>
+          {(settings.registration || footer.showUdyamMark) && (
+            <div className="flex flex-wrap items-center gap-x-4 gap-y-3 font-mono text-[0.6875rem] uppercase tracking-[0.14em] text-fg-subtle">
+              {settings.registration && <span>{settings.registration}</span>}
+              {settings.registration && footer.showUdyamMark && <span aria-hidden>·</span>}
+              {footer.showUdyamMark && <UdyamMark />}
+            </div>
+          )}
         </div>
       </div>
 
       {/* Oversized wordmark — bleeds to the edges and is clipped at the base */}
-      <div aria-hidden className="relative mt-10 select-none overflow-hidden">
-        <span className="block whitespace-nowrap px-2 text-center text-[19vw] font-bold leading-[0.78] tracking-[-0.045em] text-fg/[0.07] lg:text-[15.5vw]">
-          BondByte
-        </span>
-      </div>
+      {footer.wordmark && (
+        <div aria-hidden className="relative mt-10 select-none overflow-hidden">
+          <span className="block whitespace-nowrap px-2 text-center text-[19vw] font-bold leading-[0.78] tracking-[-0.045em] text-fg/[0.07] lg:text-[15.5vw]">
+            {footer.wordmark}
+          </span>
+        </div>
+      )}
     </footer>
   );
 }
@@ -120,7 +128,7 @@ function FooterColumn({
 }) {
   return (
     <div>
-      <h3 className="text-eyebrow mb-5">{title}</h3>
+      {title && <h3 className="text-eyebrow mb-5">{title}</h3>}
       <ul className="space-y-3">{children}</ul>
     </div>
   );

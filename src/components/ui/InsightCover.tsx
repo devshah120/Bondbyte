@@ -1,4 +1,4 @@
-import type { Insight } from "@/lib/constants/insights";
+import type { Insight } from "@/lib/cms/types";
 import { cn } from "@/lib/utils/cn";
 
 /**
@@ -60,7 +60,7 @@ export function InsightCover({
   className,
   compact = false,
 }: {
-  insight: Insight;
+  insight: Pick<Insight, "slug" | "title" | "date">;
   className?: string;
   compact?: boolean;
 }) {

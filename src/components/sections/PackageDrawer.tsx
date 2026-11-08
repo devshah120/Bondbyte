@@ -4,11 +4,8 @@ import { useEffect, useRef } from "react";
 import { AnimatePresence, motion } from "framer-motion";
 import { ArrowRight, Check, X } from "lucide-react";
 import Link from "next/link";
-import {
-  formatINR,
-  yearlyPrice,
-  type Package,
-} from "@/lib/constants/industries";
+import type { Package } from "@/lib/cms/types";
+import { formatINR, yearlyPrice } from "@/lib/format";
 
 interface PackageDrawerProps {
   open: boolean;
@@ -16,6 +13,8 @@ interface PackageDrawerProps {
   pkg: Package;
   industryName: string;
   billing: "monthly" | "yearly";
+  /** Yearly discount in percent. */
+  discount: number;
 }
 
 /**
@@ -31,6 +30,7 @@ export function PackageDrawer({
   pkg,
   industryName,
   billing,
+  discount,
 }: PackageDrawerProps) {
   const panelRef = useRef<HTMLDivElement>(null);
   const closeRef = useRef<HTMLButtonElement>(null);
@@ -76,7 +76,7 @@ export function PackageDrawer({
     };
   }, [open, onClose]);
 
-  const price = billing === "monthly" ? pkg.monthlyPrice : yearlyPrice(pkg);
+  const price = billing === "monthly" ? pkg.monthlyPrice : yearlyPrice(pkg.monthlyPrice, discount);
 
   return (
     <AnimatePresence>
@@ -159,14 +159,14 @@ export function PackageDrawer({
 
               <div className="mt-5 space-y-7">
                 {pkg.details.map((group) => (
-                  <div key={group.title}>
+                  <div key={group.id}>
                     <h4 className="text-[0.9375rem] font-medium text-fg">
                       {group.title}
                     </h4>
                     <ul className="mt-3 space-y-2 border-l border-line pl-4">
-                      {group.items.map((item) => (
+                      {group.items.map((item, i) => (
                         <li
-                          key={item}
+                          key={i}
                           className="flex items-start gap-2.5 text-[0.875rem] text-fg-muted"
                         >
                           <Check className="mt-0.5 h-3.5 w-3.5 shrink-0 text-accent-hi" />
@@ -178,7 +178,7 @@ export function PackageDrawer({
                 ))}
               </div>
 
-              {pkg.isPlaceholder && (
+              {(
                 <p className="mt-8 rounded-lg border border-line bg-surface/60 p-4 text-[0.8125rem] leading-relaxed text-fg-subtle">
                   Indicative pricing. Final cost is confirmed after a short
                   discovery call, once the scope is agreed.

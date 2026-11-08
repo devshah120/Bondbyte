@@ -2,7 +2,7 @@
 
 import { useRef, useState } from "react";
 import { ArrowUpRight } from "lucide-react";
-import { SERVICES } from "@/lib/constants/company";
+import type { HeadingData, Service } from "@/lib/cms/types";
 import { SectionHeading } from "@/components/ui/SectionHeading";
 import { cn } from "@/lib/utils/cn";
 
@@ -10,7 +10,7 @@ import { cn } from "@/lib/utils/cn";
  * §13 — interactive vertical service list. Hovering a row expands its
  * description, shifts the number, and moves a shared accent line.
  */
-export function ServicesSection() {
+export function ServicesSection({ heading, services }: { heading: HeadingData; services: Service[] }) {
   const [active, setActive] = useState<number | null>(null);
   const listRef = useRef<HTMLUListElement>(null);
 
@@ -18,20 +18,20 @@ export function ServicesSection() {
     <section data-band="tint" className="relative border-t border-line py-28 lg:py-40">
       <div className="container-page">
         <SectionHeading
-          eyebrow="Services"
-          lines={["What we do,", "end to end."]}
-          description="Eight disciplines that cover the full life of a product — from the first conversation to the release after launch."
+          eyebrow={heading.eyebrow}
+          lines={heading.heading}
+          description={heading.description}
           className="mb-16 lg:mb-24"
         />
 
         <ul ref={listRef} className="border-t border-line">
-          {SERVICES.map((service, i) => {
+          {services.map((service, i) => {
             const isActive = active === i;
             const dimmed = active !== null && !isActive;
 
             return (
               <li
-                key={service.index}
+                key={service.id}
                 onMouseEnter={() => setActive(i)}
                 onMouseLeave={() => setActive(null)}
                 className={cn(
@@ -63,7 +63,7 @@ export function ServicesSection() {
                         : "translate-x-0 text-fg-subtle",
                     )}
                   >
-                    {service.index}
+                    {String(i + 1).padStart(2, "0")}
                   </span>
 
                   <div className="flex-1 lg:grid lg:grid-cols-12 lg:items-baseline lg:gap-10">

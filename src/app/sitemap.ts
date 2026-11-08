@@ -1,44 +1,37 @@
 import type { MetadataRoute } from "next";
-import { SITE } from "@/lib/constants/site";
-import { PROJECTS } from "@/lib/constants/work";
-import { PUBLISHED_INSIGHTS } from "@/lib/constants/insights";
+import { getContent } from "@/lib/cms/server";
+import { pagePath, publishedInsights, publishedProjects } from "@/lib/cms/content";
 
-// Static export has no server to regenerate these at request time, so they are
-// baked into out/ at build time.
-export const dynamic = "force-static";
+// Pages, projects and articles change in the admin panel, so the sitemap is built on request.
+export const dynamic = "force-dynamic";
 
-export default function sitemap(): MetadataRoute.Sitemap {
-  const now = new Date();
+export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
+  const content = await getContent();
+  const domain = content.settings.domain.replace(/\/+$/, "");
+  const fallback = new Date(content.updatedAt);
 
-  const staticRoutes = [
-    { path: "", priority: 1 },
-    { path: "/work", priority: 0.9 },
-    { path: "/services", priority: 0.9 },
-    { path: "/products", priority: 0.8 },
-    { path: "/about", priority: 0.8 },
-    { path: "/pricing", priority: 0.9 },
-    { path: "/insights", priority: 0.7 },
-    { path: "/contact", priority: 0.8 },
-  ].map((route) => ({
-    url: `${SITE.domain}${route.path}`,
-    lastModified: now,
-    changeFrequency: "monthly" as const,
-    priority: route.priority,
-  }));
+  const pages = content.pages
+    .filter((page) => page.published)
+    .map((page) => ({
+      url: `${domain}${page.slug ? pagePath(page) : ""}`,
+      lastModified: page.updatedAt ? new Date(page.updatedAt) : fallback,
+      changeFrequency: "monthly" as const,
+      priority: page.slug ? 0.8 : 1,
+    }));
 
-  const projectRoutes = PROJECTS.map((project) => ({
-    url: `${SITE.domain}/work/${project.slug}`,
-    lastModified: now,
+  const projects = publishedProjects(content).map((project) => ({
+    url: `${domain}/work/${project.slug}`,
+    lastModified: fallback,
     changeFrequency: "yearly" as const,
     priority: 0.6,
   }));
 
-  const insightRoutes = PUBLISHED_INSIGHTS.map((insight) => ({
-    url: `${SITE.domain}/insights/${insight.slug}`,
+  const insights = publishedInsights(content).map((insight) => ({
+    url: `${domain}/insights/${insight.slug}`,
     lastModified: new Date(`${insight.date}T00:00:00Z`),
     changeFrequency: "yearly" as const,
     priority: 0.5,
   }));
 
-  return [...staticRoutes, ...projectRoutes, ...insightRoutes];
+  return [...pages, ...projects, ...insights];
 }

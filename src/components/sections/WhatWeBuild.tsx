@@ -3,7 +3,7 @@
 import { useEffect, useRef, useState } from "react";
 import { ArrowUpRight } from "lucide-react";
 import Link from "next/link";
-import { CAPABILITIES } from "@/lib/constants/capabilities";
+import type { HeadingData, Capability } from "@/lib/cms/types";
 import { SectionHeading } from "@/components/ui/SectionHeading";
 import { registerGsap, prefersReducedMotion } from "@/lib/animations/gsap";
 import { cn } from "@/lib/utils/cn";
@@ -24,7 +24,7 @@ const TONE_GRADIENT: Record<string, string> = {
  * preview is suppressed on touch and coarse pointers, where the rows simply
  * read as a list.
  */
-export function WhatWeBuild() {
+export function WhatWeBuild({ heading, items, linkHref }: { heading: HeadingData; items: Capability[]; linkHref: string }) {
   const [active, setActive] = useState<number | null>(null);
   const previewRef = useRef<HTMLDivElement>(null);
   const listRef = useRef<HTMLDivElement>(null);
@@ -53,14 +53,15 @@ export function WhatWeBuild() {
     return () => list.removeEventListener("pointermove", onMove);
   }, []);
 
-  const activeItem = active !== null ? CAPABILITIES[active] : null;
+  const activeItem = active !== null ? items[active] : null;
+  const indexOf = (i: number) => String(i + 1).padStart(2, "0");
 
   return (
     <section data-band="tint" className="relative border-t border-line py-28 lg:py-36">
       <div className="container-page">
         <SectionHeading
-          eyebrow="What we build"
-          lines={["Digital products engineered", "for real-world impact."]}
+          eyebrow={heading.eyebrow}
+          lines={heading.heading}
           className="mb-14 lg:mb-20"
         />
 
@@ -87,7 +88,7 @@ export function WhatWeBuild() {
                 />
                 <div className="bg-grid absolute inset-0 opacity-50" />
                 <span className="relative font-mono text-[0.625rem] uppercase tracking-[0.18em] text-fg-subtle">
-                  {activeItem.index}
+                  {indexOf(active ?? 0)}
                 </span>
                 <div className="relative">
                   <p className="text-[1.15rem] font-medium tracking-tight text-fg">
@@ -109,13 +110,13 @@ export function WhatWeBuild() {
           </div>
 
           <ul className="border-t border-line">
-            {CAPABILITIES.map((item, i) => {
+            {items.map((item, i) => {
               const isActive = active === i;
               const dimmed = active !== null && !isActive;
 
               return (
                 <li
-                  key={item.index}
+                  key={item.id}
                   onMouseEnter={() => setActive(i)}
                   onMouseLeave={() => setActive(null)}
                   className={cn(
@@ -124,7 +125,7 @@ export function WhatWeBuild() {
                   )}
                 >
                   <Link
-                    href="/services"
+                    href={linkHref}
                     className="relative flex items-center gap-5 py-6 lg:gap-10 lg:py-8"
                   >
                     <span
@@ -139,7 +140,7 @@ export function WhatWeBuild() {
                         isActive ? "translate-x-2 text-accent" : "text-fg-subtle",
                       )}
                     >
-                      {item.index}
+                      {indexOf(i)}
                     </span>
 
                     <div

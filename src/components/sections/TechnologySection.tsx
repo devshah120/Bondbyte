@@ -3,11 +3,7 @@
 import { useMemo, useState } from "react";
 import { AnimatePresence, motion } from "framer-motion";
 import { SearchX } from "lucide-react";
-import {
-  TECHNOLOGIES,
-  TECH_CATEGORIES,
-  type TechCategory,
-} from "@/lib/constants/technology";
+import type { HeadingData, Technology } from "@/lib/cms/types";
 import { SectionHeading } from "@/components/ui/SectionHeading";
 import { TechIcon } from "@/components/ui/TechIcon";
 import { cn } from "@/lib/utils/cn";
@@ -20,33 +16,33 @@ import { cn } from "@/lib/utils/cn";
  * layout animation handles the reflow so items move rather than jump, and an
  * explicit empty state covers a category with no entries.
  */
-export function TechnologySection() {
-  const [active, setActive] = useState<TechCategory | null>(null);
+export function TechnologySection({ heading, technologies, categories: allCategories }: { heading: HeadingData; technologies: Technology[]; categories: string[] }) {
+  const [active, setActive] = useState<string | null>(null);
 
   const visible = useMemo(
     () =>
       active === null
-        ? TECHNOLOGIES
-        : TECHNOLOGIES.filter((tech) => tech.category === active),
-    [active],
+        ? technologies
+        : technologies.filter((tech) => tech.category === active),
+    [active, technologies],
   );
 
   // Only offer categories that actually contain something.
   const categories = useMemo(
     () =>
-      TECH_CATEGORIES.filter((category) =>
-        TECHNOLOGIES.some((tech) => tech.category === category),
+      allCategories.filter((category) =>
+        technologies.some((tech) => tech.category === category),
       ),
-    [],
+    [technologies, allCategories],
   );
 
   return (
     <section id="technology" className="relative border-t border-line py-28 lg:py-36">
       <div className="container-page relative">
         <SectionHeading
-          eyebrow="Technology"
-          lines={["We build with technology", "that gets out of the way."]}
-          description="Tools chosen for the problem, not the trend. This is the stack we actually ship with."
+          eyebrow={heading.eyebrow}
+          lines={heading.heading}
+          description={heading.description}
           className="mb-12"
         />
 
@@ -57,7 +53,7 @@ export function TechnologySection() {
         >
           <FilterChip
             label="All"
-            count={TECHNOLOGIES.length}
+            count={technologies.length}
             active={active === null}
             onClick={() => setActive(null)}
           />
@@ -65,7 +61,7 @@ export function TechnologySection() {
             <FilterChip
               key={category}
               label={category}
-              count={TECHNOLOGIES.filter((t) => t.category === category).length}
+              count={technologies.filter((t) => t.category === category).length}
               active={active === category}
               onClick={() => setActive(active === category ? null : category)}
             />
@@ -79,7 +75,7 @@ export function TechnologySection() {
           <AnimatePresence mode="popLayout">
             {visible.map((tech) => (
               <motion.li
-                key={tech.name}
+                key={tech.id}
                 layout
                 initial={{ opacity: 0, scale: 0.94 }}
                 animate={{ opacity: 1, scale: 1 }}

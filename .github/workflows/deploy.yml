@@ -13,7 +13,7 @@ concurrency:
 jobs:
   build-deploy:
     runs-on: ubuntu-latest
-    name: Build & Deploy Static Site
+    name: Build & Deploy
 
     steps:
       - name: Checkout Repository
@@ -25,43 +25,42 @@ jobs:
           node-version: "22"
           cache: npm
 
-      # NEXT_PUBLIC_* values are inlined into the client bundle at build time,
-      # so they must be present here rather than on the server.
-      - name: Create .env.production
-        run: |
-          cat > .env.production <<EOF
-          NEXT_PUBLIC_FORM_ENDPOINT=${{ vars.NEXT_PUBLIC_FORM_ENDPOINT }}
-          NEXT_PUBLIC_FORM_ACCESS_KEY=${{ secrets.NEXT_PUBLIC_FORM_ACCESS_KEY }}
-          EOF
-
       - name: Install Dependencies
         run: npm ci
 
-      # next.config.ts sets output: "export", so this emits a self-contained
-      # static site into out/. Nothing runs on the server; nginx serves files.
-      - name: Build Static Site
+      - name: Lint
+        run: npm run lint
+
+      # next.config.ts sets output: "standalone": a self-contained Node server
+      # in .next/standalone. Content is read from DATA_DIR on the server at
+      # request time, so nothing site-specific is baked in here.
+      - name: Build
         run: npm run build
 
-      - name: Verify export
+      # The standalone server serves public/ and .next/static only when they
+      # sit next to it, and pm2 needs its process file in the release.
+      - name: Assemble Release
         run: |
-          test -f out/index.html || { echo "!! out/index.html missing"; exit 1; }
-          echo "Exported $(find out -name '*.html' | wc -l) HTML files"
+          cp -r public .next/standalone/public
+          mkdir -p .next/standalone/.next
+          cp -r .next/static .next/standalone/.next/static
+          cp deploy/ecosystem.config.cjs .next/standalone/
+          test -f .next/standalone/server.js || { echo "!! server.js missing"; exit 1; }
+          tar -czf release.tar.gz -C .next/standalone .
 
-      # Archive the contents of out/, not the directory itself.
-      - name: Archive Build
-        run: tar -czf out.tar.gz -C out .
-
-      - name: Upload Build to Server
+      - name: Upload Release to Server
         uses: appleboy/scp-action@v0.1.7
         with:
           host: ${{ secrets.SERVER_IP }}
           username: ${{ secrets.SERVER_USER }}
           key: ${{ secrets.SSH_KEY }}
-          source: "out.tar.gz"
+          source: "release.tar.gz"
           target: "/var/www/bondbyte/"
 
-      # Only the docroot is replaced. Source files and node_modules on the
-      # server are never touched, so a deploy cannot break the checkout.
+      # Each deploy unpacks into its own release folder and switches the
+      # `current` symlink, so a failed upload never touches the running site.
+      # The data folder (content, inquiries, uploads) is outside the releases
+      # and is never touched by a deploy.
       - name: Publish on Server
         uses: appleboy/ssh-action@v1.2.0
         with:
@@ -72,16 +71,27 @@ jobs:
             set -e
             cd /var/www/bondbyte
 
-            rm -rf out.new && mkdir out.new
-            tar -xzf out.tar.gz -C out.new
-            rm -f out.tar.gz
+            command -v pm2 >/dev/null || { echo "!! pm2 is not installed on the server (see README: First-time server setup)"; exit 1; }
+            test -f shared/.env || { echo "!! /var/www/bondbyte/shared/.env is missing (see README)"; exit 1; }
+            mkdir -p releases data
 
-            test -f out.new/index.html || { echo "!! bad upload"; exit 1; }
+            release="releases/$(date +%Y%m%d%H%M%S)-$(echo "${{ github.sha }}" | cut -c1-7)"
+            mkdir -p "$release"
+            tar -xzf release.tar.gz -C "$release"
+            rm -f release.tar.gz
+            test -f "$release/server.js" || { echo "!! bad upload"; rm -rf "$release"; exit 1; }
 
-            # Swap atomically so visitors never see a half-written docroot.
-            rm -rf out.old
-            [ -d out ] && mv out out.old
-            mv out.new out
-            rm -rf out.old
+            ln -sfn "$(pwd)/$release" current.new && mv -T current.new current
+            pm2 startOrReload current/ecosystem.config.cjs --update-env
+            pm2 save
 
-            echo "Published $(find out -name '*.html' | wc -l) HTML files"
+            # Wait for the new server to answer before calling it done.
+            for i in $(seq 1 20); do
+              curl -fsS -o /dev/null http://127.0.0.1:3000/robots.txt && break
+              sleep 1
+            done
+            curl -fsS -o /dev/null http://127.0.0.1:3000/robots.txt || { echo "!! server did not start"; pm2 logs bondbyte --lines 40 --nostream; exit 1; }
+
+            # Keep the three newest releases for a quick rollback.
+            ls -1dt releases/*/ | tail -n +4 | xargs -r rm -rf
+            echo "Published $release"

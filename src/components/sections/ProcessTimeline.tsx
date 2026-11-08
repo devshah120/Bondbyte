@@ -1,7 +1,7 @@
 "use client";
 
 import { useEffect, useRef, useState } from "react";
-import { PROCESS_STEPS } from "@/lib/constants/company";
+import type { HeadingData, Step } from "@/lib/cms/types";
 import { SectionHeading } from "@/components/ui/SectionHeading";
 import { registerGsap, prefersReducedMotion, ScrollTrigger } from "@/lib/animations/gsap";
 import { cn } from "@/lib/utils/cn";
@@ -13,7 +13,7 @@ import { cn } from "@/lib/utils/cn";
  * viewport centre becomes active — so the reader always knows where they are.
  * Under reduced motion the rail is drawn fully and every step reads as active.
  */
-export function ProcessTimeline() {
+export function ProcessTimeline({ heading, steps }: { heading: HeadingData; steps: Step[] }) {
   const rootRef = useRef<HTMLDivElement>(null);
   const railRef = useRef<HTMLDivElement>(null);
   const [activeStep, setActiveStep] = useState(0);
@@ -47,8 +47,8 @@ export function ProcessTimeline() {
       );
 
       // Mark the step nearest the middle of the viewport as active.
-      const steps = gsap.utils.toArray<HTMLElement>("[data-step]", root);
-      steps.forEach((step, i) => {
+      const stepElements = gsap.utils.toArray<HTMLElement>("[data-step]", root);
+      stepElements.forEach((step, i) => {
         ScrollTrigger.create({
           trigger: step,
           start: "top 65%",
@@ -67,9 +67,9 @@ export function ProcessTimeline() {
     <section data-band="tint" className="border-t border-line py-28 lg:py-36">
       <div className="container-page">
         <SectionHeading
-          eyebrow="Process"
-          lines={["From first conversation", "to production."]}
-          description="Four stages, one team. You see working software throughout, not a reveal at the end."
+          eyebrow={heading.eyebrow}
+          lines={heading.heading}
+          description={heading.description}
           className="mb-16 lg:mb-24"
         />
 
@@ -84,11 +84,11 @@ export function ProcessTimeline() {
           </div>
 
           <ol className="space-y-14 lg:space-y-24">
-            {PROCESS_STEPS.map((step, i) => {
+            {steps.map((step, i) => {
               const isActive = activeStep === i;
               return (
                 <li
-                  key={step.index}
+                  key={step.id}
                   data-step
                   className="relative lg:grid lg:grid-cols-[7.5rem_1fr] lg:gap-14"
                 >
@@ -100,7 +100,7 @@ export function ProcessTimeline() {
                         isActive ? "text-accent" : "text-fg-subtle",
                       )}
                     >
-                      {step.index}
+                      {String(i + 1).padStart(2, "0")}
                     </span>
                     <span className="h-px flex-1 bg-line lg:hidden" />
                   </div>

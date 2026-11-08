@@ -2,26 +2,28 @@ import type { Metadata } from "next";
 import Link from "next/link";
 import { notFound } from "next/navigation";
 import { ArrowLeft, ArrowUpRight } from "lucide-react";
-import {
-  PUBLISHED_INSIGHTS,
-  formatInsightDate,
-} from "@/lib/constants/insights";
-import { CTASection } from "@/components/sections/CTASection";
+import { getContent } from "@/lib/cms/server";
+import { publishedInsights } from "@/lib/cms/content";
+import { formatInsightDate } from "@/lib/format";
+import { CTASection, type CtaData } from "@/components/sections/CTASection";
 import { InsightCover } from "@/components/ui/InsightCover";
 import { ArticleBody } from "@/components/ui/ArticleBody";
-import { SITE } from "@/lib/constants/site";
+
+export const dynamic = "force-dynamic";
 
 interface PageProps {
   params: Promise<{ slug: string }>;
 }
 
-export function generateStaticParams() {
-  return PUBLISHED_INSIGHTS.map((insight) => ({ slug: insight.slug }));
+async function load(params: PageProps["params"]) {
+  const { slug } = await params;
+  const content = await getContent();
+  const insights = publishedInsights(content);
+  return { content, insights, insight: insights.find((i) => i.slug === slug) };
 }
 
 export async function generateMetadata({ params }: PageProps): Promise<Metadata> {
-  const { slug } = await params;
-  const insight = PUBLISHED_INSIGHTS.find((i) => i.slug === slug);
+  const { insight } = await load(params);
   if (!insight) return {};
 
   return {
@@ -33,18 +35,19 @@ export async function generateMetadata({ params }: PageProps): Promise<Metadata>
       title: insight.title,
       description: insight.excerpt,
       publishedTime: insight.date,
-      authors: [insight.author],
+      authors: insight.author ? [insight.author] : undefined,
     },
   };
 }
 
 export default async function InsightPage({ params }: PageProps) {
-  const { slug } = await params;
-  const insight = PUBLISHED_INSIGHTS.find((i) => i.slug === slug);
+  const { content, insights, insight } = await load(params);
   if (!insight) notFound();
 
-  const index = PUBLISHED_INSIGHTS.indexOf(insight);
-  const next = PUBLISHED_INSIGHTS[(index + 1) % PUBLISHED_INSIGHTS.length];
+  const { settings } = content;
+  const index = insights.indexOf(insight);
+  const next = insights[(index + 1) % insights.length];
+  const ctaSection = content.pages.find((p) => p.id === "insights")?.sections.find((s) => s.type === "cta" && s.visible);
 
   // Article schema — helps the piece surface correctly in search results.
   const schema = {
@@ -53,16 +56,17 @@ export default async function InsightPage({ params }: PageProps) {
     headline: insight.title,
     description: insight.excerpt,
     datePublished: insight.date,
-    author: { "@type": "Person", name: insight.author },
-    publisher: { "@type": "Organization", name: SITE.legalName },
-    mainEntityOfPage: `${SITE.domain}/insights/${insight.slug}`,
+    ...(insight.author ? { author: { "@type": "Person", name: insight.author } } : {}),
+    publisher: { "@type": "Organization", name: settings.legalName },
+    mainEntityOfPage: `${settings.domain}/insights/${insight.slug}`,
   };
 
   return (
     <>
       <script
         type="application/ld+json"
-        dangerouslySetInnerHTML={{ __html: JSON.stringify(schema) }}
+        // `<` is escaped so article text can never close the script element.
+        dangerouslySetInnerHTML={{ __html: JSON.stringify(schema).replace(/</g, "\\u003c") }}
       />
 
       <article className="relative pt-32 lg:pt-40">
@@ -93,10 +97,18 @@ export default async function InsightPage({ params }: PageProps) {
               <span className="text-accent">{insight.category}</span>
               <span className="text-fg-subtle" aria-hidden>·</span>
               <span className="text-fg-subtle">{formatInsightDate(insight.date)}</span>
-              <span className="text-fg-subtle" aria-hidden>·</span>
-              <span className="text-fg-subtle">{insight.readTime}</span>
-              <span className="text-fg-subtle" aria-hidden>·</span>
-              <span className="text-fg-subtle">By {insight.author}</span>
+              {insight.readTime && (
+                <>
+                  <span className="text-fg-subtle" aria-hidden>·</span>
+                  <span className="text-fg-subtle">{insight.readTime}</span>
+                </>
+              )}
+              {insight.author && (
+                <>
+                  <span className="text-fg-subtle" aria-hidden>·</span>
+                  <span className="text-fg-subtle">By {insight.author}</span>
+                </>
+              )}
             </div>
           </div>
         </div>
@@ -107,22 +119,24 @@ export default async function InsightPage({ params }: PageProps) {
           </div>
         </div>
 
-        <div className="border-t border-line">
-          <div className="container-page py-14">
-            <Link href={`/insights/${next.slug}`} className="group block">
-              <span className="text-eyebrow">Read next</span>
-              <div className="mt-4 flex items-center justify-between gap-6">
-                <h2 className="text-[clamp(1.5rem,3.5vw,2.25rem)] font-semibold tracking-tight transition-colors group-hover:text-accent">
-                  {next.title}
-                </h2>
-                <ArrowUpRight className="h-6 w-6 shrink-0 text-fg-subtle transition-all duration-300 group-hover:translate-x-1 group-hover:-translate-y-1 group-hover:text-fg" />
-              </div>
-            </Link>
+        {next && next.slug !== insight.slug && (
+          <div className="border-t border-line">
+            <div className="container-page py-14">
+              <Link href={`/insights/${next.slug}`} className="group block">
+                <span className="text-eyebrow">Read next</span>
+                <div className="mt-4 flex items-center justify-between gap-6">
+                  <h2 className="text-[clamp(1.5rem,3.5vw,2.25rem)] font-semibold tracking-tight transition-colors group-hover:text-accent">
+                    {next.title}
+                  </h2>
+                  <ArrowUpRight className="h-6 w-6 shrink-0 text-fg-subtle transition-all duration-300 group-hover:translate-x-1 group-hover:-translate-y-1 group-hover:text-fg" />
+                </div>
+              </Link>
+            </div>
           </div>
-        </div>
+        )}
       </article>
 
-      <CTASection />
+      {ctaSection && <CTASection data={ctaSection.data as unknown as CtaData} email={settings.email} />}
     </>
   );
 }

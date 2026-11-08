@@ -5,29 +5,27 @@ import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { AnimatePresence, motion } from "framer-motion";
 import { ArrowRight, Check, Loader2 } from "lucide-react";
-import {
-  BUDGET_RANGES,
-  PROJECT_TYPES,
-  contactSchema,
-  type ContactInput,
-} from "@/lib/validation/contact";
+import { makeContactSchema, type ContactInput } from "@/lib/validation/contact";
 import { cn } from "@/lib/utils/cn";
-
-/**
- * External form backend. The site is a static export, so submissions go to a
- * third-party endpoint rather than an API route of our own. Both values are
- * baked into the client bundle at build time, which is why the access key must
- * be a public/submit-only one.
- */
-const FORM_ENDPOINT = process.env.NEXT_PUBLIC_FORM_ENDPOINT ?? "";
-const FORM_ACCESS_KEY = process.env.NEXT_PUBLIC_FORM_ACCESS_KEY ?? "";
 
 type Status = "idle" | "submitting" | "success" | "error";
 
-/** §23 — validated contact form with animated errors and a polished success state. */
-export function ContactForm() {
+interface ContactFormProps {
+  projectTypes: string[];
+  budgets: string[];
+  successTitle: string;
+  successText: string;
+  email: string;
+}
+
+/**
+ * §23 — validated contact form with animated errors and a polished success
+ * state. Messages are saved by /api/inquiries and appear in the admin panel.
+ */
+export function ContactForm({ projectTypes, budgets, successTitle, successText, email }: ContactFormProps) {
   const [status, setStatus] = useState<Status>("idle");
   const [serverError, setServerError] = useState<string | null>(null);
+  const [schema] = useState(() => makeContactSchema(projectTypes, budgets));
 
   const {
     register,
@@ -35,7 +33,7 @@ export function ContactForm() {
     reset,
     formState: { errors },
   } = useForm<ContactInput>({
-    resolver: zodResolver(contactSchema),
+    resolver: zodResolver(schema),
     mode: "onBlur",
   });
 
@@ -43,42 +41,16 @@ export function ContactForm() {
     setStatus("submitting");
     setServerError(null);
 
-    // The site is a static export, so there is no API route of our own to post
-    // to. FORM_ENDPOINT is an external form service; swapping providers means
-    // changing the env var, not this component.
-    if (!FORM_ENDPOINT) {
-      setServerError(
-        "The contact form is not configured yet. Please email us directly.",
-      );
-      setStatus("error");
-      return;
-    }
-
     try {
-      const { website, ...submission } = values;
-      // Honeypot: a filled "website" field means a bot. Report success so the
-      // bot sees no signal, but never send it on.
-      if (website) {
-        reset();
-        setStatus("success");
-        return;
-      }
-
-      const response = await fetch(FORM_ENDPOINT, {
+      const response = await fetch("/api/inquiries", {
         method: "POST",
-        headers: {
-          "Content-Type": "application/json",
-          Accept: "application/json",
-        },
-        body: JSON.stringify({
-          ...submission,
-          ...(FORM_ACCESS_KEY ? { access_key: FORM_ACCESS_KEY } : {}),
-          subject: `New enquiry from ${submission.name}`,
-        }),
+        headers: { "Content-Type": "application/json", Accept: "application/json" },
+        body: JSON.stringify(values),
       });
 
       if (!response.ok) {
-        setServerError("Something went wrong. Please try again.");
+        const data = await response.json().catch(() => null);
+        setServerError(data?.error ?? `Something went wrong. Please try again, or email us at ${email}.`);
         setStatus("error");
         return;
       }
@@ -86,9 +58,7 @@ export function ContactForm() {
       reset();
       setStatus("success");
     } catch {
-      setServerError(
-        "We couldn't reach the server. Please check your connection or email us directly.",
-      );
+      setServerError(`We couldn't reach the server. Please check your connection or email us at ${email}.`);
       setStatus("error");
     }
   };
@@ -104,10 +74,9 @@ export function ContactForm() {
         <span className="flex h-11 w-11 items-center justify-center rounded-full bg-accent/15 text-accent-hi">
           <Check className="h-5 w-5" />
         </span>
-        <h3 className="mt-7 text-2xl font-medium tracking-tight">Message received.</h3>
+        <h3 className="mt-7 text-2xl font-medium tracking-tight">{successTitle || "Message received."}</h3>
         <p className="mt-3 max-w-sm text-[0.9375rem] leading-relaxed text-fg-muted">
-          Thanks for reaching out — we read every enquiry and will get back to
-          you shortly.
+          {successText || "Thanks for reaching out — we will get back to you shortly."}
         </p>
         <button
           type="button"
@@ -161,7 +130,9 @@ export function ContactForm() {
         />
       </Field>
 
+      {(projectTypes.length > 0 || budgets.length > 0) && (
       <div className="grid gap-6 sm:grid-cols-2">
+        {projectTypes.length > 0 && (
         <Field label="Project type" error={errors.projectType?.message} htmlFor="projectType">
           <select
             id="projectType"
@@ -172,14 +143,16 @@ export function ContactForm() {
             <option value="" disabled>
               Select one
             </option>
-            {PROJECT_TYPES.map((type) => (
+            {projectTypes.map((type) => (
               <option key={type} value={type} className="bg-surface">
                 {type}
               </option>
             ))}
           </select>
         </Field>
+        )}
 
+        {budgets.length > 0 && (
         <Field label="Budget" error={errors.budget?.message} htmlFor="budget" optional>
           <select
             id="budget"
@@ -190,14 +163,16 @@ export function ContactForm() {
             <option value="" className="bg-surface">
               Prefer not to say
             </option>
-            {BUDGET_RANGES.map((range) => (
+            {budgets.map((range) => (
               <option key={range} value={range} className="bg-surface">
                 {range}
               </option>
             ))}
           </select>
         </Field>
+        )}
       </div>
+      )}
 
       <Field label="Message" error={errors.message?.message} htmlFor="message">
         <textarea

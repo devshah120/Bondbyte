@@ -3,7 +3,7 @@
 import Link from "next/link";
 import { useEffect, useRef } from "react";
 import { ArrowUpRight } from "lucide-react";
-import type { Project } from "@/lib/constants/work";
+import type { Project } from "@/lib/cms/types";
 import { ProjectVisual } from "./ProjectVisual";
 import { AnimatedText } from "@/components/animations/AnimatedText";
 import { Reveal } from "@/components/animations/Reveal";
@@ -73,7 +73,7 @@ export function CaseStudy({
             {project.metrics.length > 0 && (
               <dl className="mt-8 flex gap-10">
                 {project.metrics.map((metric) => (
-                  <div key={metric.label}>
+                  <div key={metric.id}>
                     <dt className="sr-only">{metric.label}</dt>
                     <dd className="text-2xl font-medium tracking-tight text-fg">
                       {metric.value}

@@ -4,7 +4,7 @@ import Link from "next/link";
 import { usePathname } from "next/navigation";
 import { useEffect, useState } from "react";
 import { motion, AnimatePresence } from "framer-motion";
-import { NAV_LEFT, NAV_RIGHT } from "@/lib/constants/site";
+import { useSite } from "@/components/site/SiteProvider";
 import { MagneticButton } from "@/components/ui/MagneticButton";
 import { MobileMenu } from "./MobileMenu";
 import { Logo } from "@/components/ui/Logo";
@@ -19,6 +19,7 @@ export function Navbar() {
   const [scrolled, setScrolled] = useState(false);
   const [menuOpen, setMenuOpen] = useState(false);
   const pathname = usePathname();
+  const { header, brand, name } = useSite();
 
   useEffect(() => {
     const onScroll = () => setScrolled(window.scrollY > 24);
@@ -57,8 +58,8 @@ export function Navbar() {
         <nav className="container-page flex h-[76px] items-center justify-between gap-8">
           {/* Left nav — desktop */}
           <ul className="hidden flex-1 items-center gap-8 lg:flex">
-            {NAV_LEFT.map((link) => (
-              <NavItem key={link.href} href={link.href} active={pathname === link.href}>
+            {header.leftLinks.map((link) => (
+              <NavItem key={link.id} href={link.href} active={pathname === link.href}>
                 {link.label}
               </NavItem>
             ))}
@@ -67,23 +68,23 @@ export function Navbar() {
           {/* Centred wordmark */}
           <Link
             href="/"
-            aria-label="BondByte — home"
+            aria-label={`${name} — home`}
             className="shrink-0 lg:absolute lg:left-1/2 lg:-translate-x-1/2"
           >
-            <Logo />
+            <Logo brand={brand} />
           </Link>
 
           {/* Right nav + CTA — desktop */}
           <div className="hidden flex-1 items-center justify-end gap-8 lg:flex">
             <ul className="flex items-center gap-8">
-              {NAV_RIGHT.map((link) => (
-                <NavItem key={link.href} href={link.href} active={pathname === link.href}>
+              {header.rightLinks.map((link) => (
+                <NavItem key={link.id} href={link.href} active={pathname === link.href}>
                   {link.label}
                 </NavItem>
               ))}
             </ul>
-            <MagneticButton href="/contact" className="px-5 py-2.5 text-[0.8125rem]">
-              Get in Touch
+            <MagneticButton href={header.ctaHref} className="px-5 py-2.5 text-[0.8125rem]">
+              {header.ctaLabel}
             </MagneticButton>
           </div>
 

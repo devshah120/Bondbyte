@@ -1,18 +1,35 @@
 import type { NextConfig } from "next";
 
 const nextConfig: NextConfig = {
-  // Static export: `next build` emits a plain HTML/CSS/JS site into `out/`,
-  // which nginx serves directly (see deploy/nginx-bondbyte.conf). No Node
-  // process runs in production, so there is nothing to restart or crash.
-  output: "export",
+  // The site runs as a Node server so the admin panel and its JSON API work.
+  // `standalone` emits .next/standalone with a minimal server.js and only the
+  // node_modules it needs, which the deploy workflow ships to the server.
+  output: "standalone",
 
-  // The default image loader needs a server to resize on demand. Static
-  // export has none, so images are served as-authored from /public.
+  // Images are served as-authored from /public and /uploads (the admin's
+  // media library). Turning optimisation on would need `sharp` on the server.
   images: { unoptimized: true },
 
-  // Emit `about/index.html` rather than `about.html` so nginx can serve
-  // clean URLs (/about) without rewrite rules.
-  trailingSlash: true,
+  poweredByHeader: false,
+
+  async headers() {
+    return [
+      {
+        source: "/admin/:path*",
+        headers: [
+          { key: "X-Robots-Tag", value: "noindex, nofollow" },
+          { key: "X-Frame-Options", value: "DENY" },
+        ],
+      },
+      {
+        source: "/:path*",
+        headers: [
+          { key: "X-Content-Type-Options", value: "nosniff" },
+          { key: "Referrer-Policy", value: "strict-origin-when-cross-origin" },
+        ],
+      },
+    ];
+  },
 };
 
 export default nextConfig;

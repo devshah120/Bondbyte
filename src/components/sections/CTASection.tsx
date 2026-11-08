@@ -3,10 +3,17 @@
 import { useRef } from "react";
 import { AnimatedText } from "@/components/animations/AnimatedText";
 import { MagneticButton } from "@/components/ui/MagneticButton";
-import { SITE } from "@/lib/constants/site";
+
+export interface CtaData {
+  heading: string[];
+  text: string;
+  buttonLabel: string;
+  buttonHref: string;
+  showEmail: boolean;
+}
 
 /** §22 — closing CTA with a cursor-tracked glow and magnetic button. */
-export function CTASection() {
+export function CTASection({ data, email }: { data: CtaData; email: string }) {
   const rootRef = useRef<HTMLDivElement>(null);
 
   // Pointer position drives a CSS variable — no React re-render per frame.
@@ -41,23 +48,23 @@ export function CTASection() {
         <div className="container-page relative text-center">
           <AnimatedText
             as="h2"
-            lines={["Have a product", "worth building?"]}
+            lines={data.heading}
             className="text-display mx-auto text-[clamp(2.4rem,7vw,5.25rem)]"
           />
 
-          <p className="mx-auto mt-8 max-w-xl text-[1.0625rem] leading-relaxed text-fg-muted">
-            Tell us what you&apos;re building. We&apos;ll help turn the idea into
-            something real.
-          </p>
+          {data.text && (
+            <p className="mx-auto mt-8 max-w-xl text-[1.0625rem] leading-relaxed text-fg-muted">
+              {data.text}
+            </p>
+          )}
 
           <div className="mt-12 flex flex-col items-center justify-center gap-5 sm:flex-row">
-            <MagneticButton href="/contact">Start a Conversation</MagneticButton>
-            <a
-              href={`mailto:${SITE.email}`}
-              className="text-sm text-fg-muted transition-colors hover:text-fg"
-            >
-              {SITE.email}
-            </a>
+            {data.buttonLabel && data.buttonHref && <MagneticButton href={data.buttonHref}>{data.buttonLabel}</MagneticButton>}
+            {data.showEmail && (
+              <a href={`mailto:${email}`} className="text-sm text-fg-muted transition-colors hover:text-fg">
+                {email}
+              </a>
+            )}
           </div>
         </div>
       </div>

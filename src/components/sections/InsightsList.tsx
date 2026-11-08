@@ -4,11 +4,8 @@ import Link from "next/link";
 import { useMemo, useState } from "react";
 import { AnimatePresence, motion } from "framer-motion";
 import { ArrowRight, SearchX } from "lucide-react";
-import {
-  PUBLISHED_INSIGHTS,
-  formatInsightDate,
-  type InsightCategory,
-} from "@/lib/constants/insights";
+import type { Insight } from "@/lib/cms/types";
+import { formatInsightDate } from "@/lib/format";
 import { InsightCover } from "@/components/ui/InsightCover";
 import { cn } from "@/lib/utils/cn";
 
@@ -17,24 +14,24 @@ import { cn } from "@/lib/utils/cn";
  * left, metadata and headline on the right. Category filtering is client-side
  * and animated, with an empty state for a category holding nothing.
  */
-export function InsightsList() {
-  const [category, setCategory] = useState<InsightCategory | null>(null);
+export function InsightsList({ insights }: { insights: Insight[] }) {
+  const [category, setCategory] = useState<string | null>(null);
 
   // Only offer categories that actually have published articles.
   const categories = useMemo(() => {
-    const counts = new Map<InsightCategory, number>();
-    for (const insight of PUBLISHED_INSIGHTS) {
+    const counts = new Map<string, number>();
+    for (const insight of insights) {
       counts.set(insight.category, (counts.get(insight.category) ?? 0) + 1);
     }
     return [...counts.entries()].sort((a, b) => b[1] - a[1]);
-  }, []);
+  }, [insights]);
 
   const visible = useMemo(
     () =>
       category === null
-        ? PUBLISHED_INSIGHTS
-        : PUBLISHED_INSIGHTS.filter((i) => i.category === category),
-    [category],
+        ? insights
+        : insights.filter((i) => i.category === category),
+    [category, insights],
   );
 
   return (
@@ -48,7 +45,7 @@ export function InsightsList() {
         >
           <Chip
             label="All"
-            count={PUBLISHED_INSIGHTS.length}
+            count={insights.length}
             active={category === null}
             onClick={() => setCategory(null)}
           />

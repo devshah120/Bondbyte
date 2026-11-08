@@ -1,17 +1,16 @@
 import type { MetadataRoute } from "next";
-import { SITE } from "@/lib/constants/site";
+import { getContent } from "@/lib/cms/server";
 
-// Static export has no server to regenerate these at request time, so they are
-// baked into out/ at build time.
-export const dynamic = "force-static";
+export const dynamic = "force-dynamic";
 
-export default function robots(): MetadataRoute.Robots {
+export default async function robots(): Promise<MetadataRoute.Robots> {
+  const { settings } = await getContent();
   return {
     rules: {
       userAgent: "*",
       allow: "/",
-      disallow: "/api/",
+      disallow: ["/api/", "/admin"],
     },
-    sitemap: `${SITE.domain}/sitemap.xml`,
+    sitemap: `${settings.domain.replace(/\/+$/, "")}/sitemap.xml`,
   };
 }

@@ -2,24 +2,36 @@ import type { Metadata } from "next";
 import Link from "next/link";
 import { notFound } from "next/navigation";
 import { ArrowLeft, ArrowUpRight } from "lucide-react";
-import { PROJECTS } from "@/lib/constants/work";
+import { getContent } from "@/lib/cms/server";
+import { publishedProjects } from "@/lib/cms/content";
 import { ProjectVisual } from "@/components/work/ProjectVisual";
 import { AnimatedText } from "@/components/animations/AnimatedText";
 import { Reveal } from "@/components/animations/Reveal";
-import { CTASection } from "@/components/sections/CTASection";
+import { CTASection, type CtaData } from "@/components/sections/CTASection";
+
+export const dynamic = "force-dynamic";
 
 interface PageProps {
   params: Promise<{ slug: string }>;
 }
 
-/** Pre-render every case study at build time. */
-export function generateStaticParams() {
-  return PROJECTS.map((project) => ({ slug: project.slug }));
+async function load(params: PageProps["params"]) {
+  const { slug } = await params;
+  const content = await getContent();
+  const projects = publishedProjects(content);
+  const project = projects.find((p) => p.slug === slug);
+  return { content, projects, project };
+}
+
+/** The closing call to action of the work page, so case studies match it. */
+function closingCta(content: Awaited<ReturnType<typeof getContent>>): CtaData | null {
+  const page = content.pages.find((p) => p.id === "work");
+  const section = page?.sections.find((s) => s.type === "cta" && s.visible);
+  return section ? (section.data as unknown as CtaData) : null;
 }
 
 export async function generateMetadata({ params }: PageProps): Promise<Metadata> {
-  const { slug } = await params;
-  const project = PROJECTS.find((p) => p.slug === slug);
+  const { content, project } = await load(params);
   if (!project) return {};
 
   return {
@@ -27,19 +39,22 @@ export async function generateMetadata({ params }: PageProps): Promise<Metadata>
     description: project.summary,
     alternates: { canonical: `/work/${project.slug}` },
     openGraph: {
-      title: `${project.title} — BondByte`,
+      type: "website",
+      siteName: content.settings.name,
+      title: `${project.title} — ${content.settings.name}`,
       description: project.summary,
+      ...(project.image ? { images: [project.image] } : {}),
     },
   };
 }
 
 export default async function CaseStudyPage({ params }: PageProps) {
-  const { slug } = await params;
-  const project = PROJECTS.find((p) => p.slug === slug);
+  const { content, projects, project } = await load(params);
   if (!project) notFound();
 
-  const index = PROJECTS.indexOf(project);
-  const next = PROJECTS[(index + 1) % PROJECTS.length];
+  const index = projects.indexOf(project);
+  const next = projects[(index + 1) % projects.length];
+  const cta = closingCta(content);
 
   return (
     <>
@@ -91,7 +106,7 @@ export default async function CaseStudyPage({ params }: PageProps) {
               {project.description ? (
                 <Reveal>
                   <h2 className="text-eyebrow mb-6">Overview</h2>
-                  <p className="text-[1.15rem] leading-relaxed text-fg">
+                  <p className="whitespace-pre-line text-[1.15rem] leading-relaxed text-fg">
                     {project.description}
                   </p>
                 </Reveal>
@@ -119,21 +134,23 @@ export default async function CaseStudyPage({ params }: PageProps) {
                   <p className="mt-3 text-[0.9375rem] text-fg">{project.discipline}</p>
                 </div>
 
-                <div>
-                  <h3 className="font-mono text-[0.6875rem] uppercase tracking-[0.16em] text-fg-subtle">
-                    Stack
-                  </h3>
-                  <div className="mt-3 flex flex-wrap gap-2">
-                    {project.stack.map((tech) => (
-                      <span
-                        key={tech}
-                        className="rounded-full border border-line px-3 py-1 font-mono text-[0.625rem] uppercase tracking-[0.12em] text-fg-muted"
-                      >
-                        {tech}
-                      </span>
-                    ))}
+                {project.stack.length > 0 && (
+                  <div>
+                    <h3 className="font-mono text-[0.6875rem] uppercase tracking-[0.16em] text-fg-subtle">
+                      Stack
+                    </h3>
+                    <div className="mt-3 flex flex-wrap gap-2">
+                      {project.stack.map((tech) => (
+                        <span
+                          key={tech}
+                          className="rounded-full border border-line px-3 py-1 font-mono text-[0.625rem] uppercase tracking-[0.12em] text-fg-muted"
+                        >
+                          {tech}
+                        </span>
+                      ))}
+                    </div>
                   </div>
-                </div>
+                )}
 
                 {project.metrics.length > 0 && (
                   <div>
@@ -142,7 +159,7 @@ export default async function CaseStudyPage({ params }: PageProps) {
                     </h3>
                     <dl className="mt-3 space-y-4">
                       {project.metrics.map((metric) => (
-                        <div key={metric.label}>
+                        <div key={metric.id}>
                           <dd className="text-2xl font-medium tracking-tight text-fg">
                             {metric.value}
                           </dd>
@@ -160,22 +177,24 @@ export default async function CaseStudyPage({ params }: PageProps) {
         </div>
 
         {/* Next project */}
-        <div className="border-t border-line">
-          <div className="container-page py-16">
-            <Link href={`/work/${next.slug}`} className="group block">
-              <span className="text-eyebrow">Next project</span>
-              <div className="mt-4 flex items-center justify-between gap-6">
-                <h2 className="text-display text-[clamp(1.8rem,4.5vw,3rem)] transition-colors group-hover:text-accent-hi">
-                  {next.title}
-                </h2>
-                <ArrowUpRight className="h-6 w-6 shrink-0 text-fg-subtle transition-all duration-300 group-hover:translate-x-1 group-hover:-translate-y-1 group-hover:text-fg" />
-              </div>
-            </Link>
+        {next && next.slug !== project.slug && (
+          <div className="border-t border-line">
+            <div className="container-page py-16">
+              <Link href={`/work/${next.slug}`} className="group block">
+                <span className="text-eyebrow">Next project</span>
+                <div className="mt-4 flex items-center justify-between gap-6">
+                  <h2 className="text-display text-[clamp(1.8rem,4.5vw,3rem)] transition-colors group-hover:text-accent-hi">
+                    {next.title}
+                  </h2>
+                  <ArrowUpRight className="h-6 w-6 shrink-0 text-fg-subtle transition-all duration-300 group-hover:translate-x-1 group-hover:-translate-y-1 group-hover:text-fg" />
+                </div>
+              </Link>
+            </div>
           </div>
-        </div>
+        )}
       </article>
 
-      <CTASection />
+      {cta && <CTASection data={cta} email={content.settings.email} />}
     </>
   );
 }

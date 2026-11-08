@@ -1,21 +1,29 @@
 import Link from "next/link";
 import { Check } from "lucide-react";
-import { PRICING_TIERS } from "@/lib/constants/pricing";
+import type { PricingTier } from "@/lib/cms/types";
 import { SectionHeading } from "@/components/ui/SectionHeading";
 import { Reveal } from "@/components/animations/Reveal";
 import { cn } from "@/lib/utils/cn";
 
 /** Pricing tiers, with the primary tier raised and accented. */
-export function PricingSection() {
+export interface PricingData {
+  eyebrow: string;
+  heading: string[];
+  description: string;
+  badge: string;
+  footnote: string;
+}
+
+export function PricingSection({ data, tiers }: { data: PricingData; tiers: PricingTier[] }) {
   return (
     <section id="pricing" className="relative border-t border-line py-28 lg:py-36">
       <div className="pointer-events-none absolute left-1/2 top-0 h-80 w-[46rem] -translate-x-1/2 rounded-full bg-accent/[0.08] blur-[130px]" />
 
       <div className="container-page relative">
         <SectionHeading
-          eyebrow="Pricing"
-          lines={["Clear scope.", "Clear price."]}
-          description="Fixed-price engagements for defined work, and a monthly team when the roadmap keeps going."
+          eyebrow={data.eyebrow}
+          lines={data.heading}
+          description={data.description}
           align="center"
           className="mb-16"
         />
@@ -24,9 +32,9 @@ export function PricingSection() {
           staggerChildren
           className="grid gap-6 md:grid-cols-2 lg:grid-cols-4 lg:items-start"
         >
-          {PRICING_TIERS.map((tier) => (
+          {tiers.map((tier) => (
             <div
-              key={tier.name}
+              key={tier.id}
               className={cn(
                 "relative flex h-full flex-col rounded-xl border p-7 transition-colors duration-500",
                 tier.featured
@@ -34,9 +42,9 @@ export function PricingSection() {
                   : "border-line bg-surface/40 hover:border-line-strong",
               )}
             >
-              {tier.featured && (
+              {tier.featured && data.badge && (
                 <span className="absolute -top-3 left-1/2 -translate-x-1/2 rounded-full bg-accent px-3 py-1 font-mono text-[0.5625rem] uppercase tracking-[0.16em] text-white">
-                  Most chosen
+                  {data.badge}
                 </span>
               )}
 
@@ -89,9 +97,7 @@ export function PricingSection() {
           ))}
         </Reveal>
 
-        <p className="mt-10 text-center text-[0.8125rem] text-fg-subtle">
-          Every engagement starts with a call. No obligation, no sales script.
-        </p>
+        {data.footnote && <p className="mt-10 text-center text-[0.8125rem] text-fg-subtle">{data.footnote}</p>}
       </div>
     </section>
   );

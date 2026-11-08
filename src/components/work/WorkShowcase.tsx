@@ -3,7 +3,7 @@
 import Link from "next/link";
 import { useState } from "react";
 import { ArrowUpRight } from "lucide-react";
-import { FEATURED_PROJECTS } from "@/lib/constants/work";
+import type { HeadingData, Project } from "@/lib/cms/types";
 import { ProjectVisual } from "./ProjectVisual";
 import { SectionHeading } from "@/components/ui/SectionHeading";
 import { cn } from "@/lib/utils/cn";
@@ -13,20 +13,21 @@ import { cn } from "@/lib/utils/cn";
  * shared preview on the right, so the homepage shows the whole portfolio
  * without scrolling through a stack of full case studies.
  */
-export function WorkShowcase() {
+export function WorkShowcase({ heading, linkLabel, projects }: { heading: HeadingData; linkLabel: string; projects: Project[] }) {
   const [active, setActive] = useState(0);
-  const project = FEATURED_PROJECTS[active];
+  const project = projects[active] ?? projects[0];
+  if (!project) return null;
 
   return (
     <section className="relative border-t border-line py-28 lg:py-36">
       <div className="container-page">
         <div className="mb-14 flex flex-col gap-6 lg:flex-row lg:items-end lg:justify-between">
-          <SectionHeading eyebrow="Selected work" lines={["Products we've", "put into the world."]} />
+          <SectionHeading eyebrow={heading.eyebrow} lines={heading.heading} />
           <Link
             href="/work"
             className="group inline-flex shrink-0 items-center gap-2 text-sm text-fg-muted transition-colors hover:text-fg"
           >
-            All work
+            {linkLabel || "All work"}
             <ArrowUpRight className="h-4 w-4 transition-transform duration-300 group-hover:translate-x-1 group-hover:-translate-y-1" />
           </Link>
         </div>
@@ -35,7 +36,7 @@ export function WorkShowcase() {
           {/* Selector */}
           <div className="lg:col-span-5">
             <ul className="border-t border-line">
-              {FEATURED_PROJECTS.map((item, i) => {
+              {projects.map((item, i) => {
                 const isActive = i === active;
                 return (
                   <li key={item.slug} className="border-b border-line">

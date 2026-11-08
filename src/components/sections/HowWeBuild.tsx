@@ -1,7 +1,7 @@
 "use client";
 
 import { useEffect, useRef } from "react";
-import { PRINCIPLES } from "@/lib/constants/company";
+import type { Step } from "@/lib/cms/types";
 import { AnimatedText } from "@/components/animations/AnimatedText";
 import { Reveal } from "@/components/animations/Reveal";
 import { createParallax } from "@/lib/animations/parallax";
@@ -11,7 +11,16 @@ import { createParallax } from "@/lib/animations/parallax";
  * competing on price. Sits at the top of the pricing page so the quality
  * case is made before any number appears.
  */
-export function HowWeBuild() {
+export interface HowWeBuildData {
+  eyebrow: string;
+  heading: string[];
+  lead: string;
+  text: string;
+  statement: string;
+  statementMuted: string;
+}
+
+export function HowWeBuild({ data, principles }: { data: HowWeBuildData; principles: Step[] }) {
   const markRef = useRef<HTMLDivElement>(null);
 
   useEffect(() => {
@@ -33,39 +42,35 @@ export function HowWeBuild() {
           <div className="lg:col-span-6">
             <div className="mb-8 flex items-center gap-3">
               <span className="h-px w-8 bg-line-strong" />
-              <span className="text-eyebrow">Why we cost what we cost</span>
+              <span className="text-eyebrow">{data.eyebrow}</span>
             </div>
 
             <AnimatedText
               as="h2"
-              lines={["The difference", "is how we build."]}
+              lines={data.heading}
               className="text-display text-[clamp(2.4rem,6.5vw,4.75rem)]"
             />
 
             <Reveal delay={0.1} className="mt-9 space-y-5">
               <p className="max-w-lg text-[1.15rem] leading-relaxed text-fg">
-                Anyone can quote a lower number. The question is what arrives,
-                and what it costs you to live with it afterwards.
+                {data.lead}
               </p>
               <p className="max-w-lg text-[1.0625rem] leading-relaxed text-fg-muted">
-                We are not the cheapest way to get software made, and we do not
-                try to be. What we offer is work that is scoped honestly,
-                engineered to be changed, and owned by you outright — so the
-                second year costs less than the first rather than more.
+                {data.text}
               </p>
             </Reveal>
           </div>
 
           <div className="lg:col-span-6">
             <Reveal staggerChildren>
-              {PRINCIPLES.map((principle) => (
+              {principles.map((principle, i) => (
                 <div
-                  key={principle.index}
+                  key={principle.id}
                   className="group border-t border-line py-7 transition-colors duration-500 last:border-b"
                 >
                   <div className="flex gap-6">
                     <span className="font-mono text-[0.6875rem] tracking-[0.16em] text-accent-hi">
-                      {principle.index}
+                      {String(i + 1).padStart(2, "0")}
                     </span>
                     <div>
                       <h3 className="text-[1.25rem] font-medium tracking-tight text-fg">
@@ -85,11 +90,8 @@ export function HowWeBuild() {
         {/* Oversized supporting statement */}
         <div ref={markRef} className="mt-20 border-t border-line pt-12">
           <p className="max-w-4xl text-[clamp(1.35rem,3.2vw,2.25rem)] font-medium leading-[1.25] tracking-tight text-fg">
-            Cheap software is only cheap until you need to change it.
-            <span className="text-fg-subtle">
-              {" "}
-              We build the version that survives its own success.
-            </span>
+            {data.statement}
+            {data.statementMuted && <span className="text-fg-subtle"> {data.statementMuted}</span>}
           </p>
         </div>
       </div>

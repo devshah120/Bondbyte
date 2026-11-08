@@ -1,8 +1,8 @@
 import Image from "next/image";
-import type { Project } from "@/lib/constants/work";
+import type { Project } from "@/lib/cms/types";
 import { cn } from "@/lib/utils/cn";
 
-const TONE: Record<Project["tone"], { from: string; glow: string; ring: string }> = {
+const TONE: Record<string, { from: string; glow: string; ring: string }> = {
   indigo: { from: "from-indigo-500/20", glow: "bg-indigo-500/25", ring: "border-indigo-400/25" },
   amber: { from: "from-amber-500/20", glow: "bg-amber-500/20", ring: "border-amber-400/25" },
   rose: { from: "from-rose-500/20", glow: "bg-rose-500/20", ring: "border-rose-400/25" },
@@ -24,7 +24,7 @@ export function ProjectVisual({
   className?: string;
   priority?: boolean;
 }) {
-  const tone = TONE[project.tone];
+  const tone = TONE[project.tone] ?? TONE.slate;
 
   if (project.image) {
     return (

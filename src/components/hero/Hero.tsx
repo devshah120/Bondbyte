@@ -3,10 +3,20 @@
 import { useEffect, useRef } from "react";
 import { MagneticButton } from "@/components/ui/MagneticButton";
 import { EASE, prefersReducedMotion, registerGsap } from "@/lib/animations/gsap";
-import { SITE } from "@/lib/constants/site";
+
+export interface HeroData {
+  eyebrow: string;
+  line1: string;
+  line2: string;
+  text: string;
+  primaryLabel: string;
+  primaryHref: string;
+  secondaryLabel: string;
+  secondaryHref: string;
+}
 
 /** Hero with the staged GSAP entrance timeline from §10. */
-export function Hero() {
+export function Hero({ data }: { data: HeroData }) {
   const rootRef = useRef<HTMLElement>(null);
 
   useEffect(() => {
@@ -83,42 +93,46 @@ export function Hero() {
               <span className="absolute inline-flex h-full w-full animate-ping rounded-full bg-accent-hi opacity-60" />
               <span className="relative inline-flex h-1.5 w-1.5 rounded-full bg-accent-hi" />
             </span>
-            <span className="text-eyebrow">
-              Digital product studio
-            </span>
+            <span className="text-eyebrow">{data.eyebrow}</span>
           </div>
 
           <h1 className="text-display text-[clamp(2.5rem,8.4vw,6.25rem)]">
             <span className="block overflow-hidden pb-[0.06em]">
               <span data-hero="line-1" className="block">
-                Your idea. Our code.
+                {data.line1}
               </span>
             </span>
-            <span className="block overflow-hidden pb-[0.06em]">
-              <span data-hero="line-2" className="block text-accent-hi">
-                Live within 48 hours.
+            {data.line2 && (
+              <span className="block overflow-hidden pb-[0.06em]">
+                <span data-hero="line-2" className="block text-accent-hi">
+                  {data.line2}
+                </span>
               </span>
-            </span>
+            )}
           </h1>
 
-          <p
-            data-hero="support"
-            className="mt-9 max-w-xl text-[1.0625rem] leading-relaxed text-fg-muted opacity-0 sm:text-[1.15rem]"
-          >
-            We design, build and ship production software — landing pages and
-            stores in 48 hours, full products in weeks. Strategy, design and
-            engineering under one roof.
-          </p>
+          {data.text && (
+            <p
+              data-hero="support"
+              className="mt-9 max-w-xl text-[1.0625rem] leading-relaxed text-fg-muted opacity-0 sm:text-[1.15rem]"
+            >
+              {data.text}
+            </p>
+          )}
 
           <div className="mt-11 flex flex-wrap items-center gap-4">
-            <div data-hero="cta" className="opacity-0">
-              <MagneticButton href="/contact">Start a Project</MagneticButton>
-            </div>
-            <div data-hero="cta" className="opacity-0">
-              <MagneticButton href="/work" variant="secondary">
-                Explore Our Work
-              </MagneticButton>
-            </div>
+            {data.primaryLabel && data.primaryHref && (
+              <div data-hero="cta" className="opacity-0">
+                <MagneticButton href={data.primaryHref}>{data.primaryLabel}</MagneticButton>
+              </div>
+            )}
+            {data.secondaryLabel && data.secondaryHref && (
+              <div data-hero="cta" className="opacity-0">
+                <MagneticButton href={data.secondaryHref} variant="secondary">
+                  {data.secondaryLabel}
+                </MagneticButton>
+              </div>
+            )}
           </div>
         </div>
       </div>

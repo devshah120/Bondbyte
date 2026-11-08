@@ -1,4 +1,4 @@
-import type { InsightBlock } from "@/lib/constants/insights";
+import type { InsightBlock } from "@/lib/cms/types";
 
 /**
  * Renders an article's typed blocks.
@@ -35,10 +35,10 @@ export function ArticleBody({ blocks }: { blocks: readonly InsightBlock[] }) {
 
           case "list":
             return (
-              <ul key={i} className="space-y-2.5 pl-1">
-                {block.items.map((item) => (
+              <ul key={block.id ?? i} className="space-y-2.5 pl-1">
+                {block.items.map((item, j) => (
                   <li
-                    key={item}
+                    key={j}
                     className="flex gap-3 text-[1.0625rem] leading-[1.75] text-fg-muted"
                   >
                     <span aria-hidden className="mt-[0.7em] h-1 w-1 shrink-0 rounded-full bg-accent" />
